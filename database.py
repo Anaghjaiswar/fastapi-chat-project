@@ -9,7 +9,7 @@ load_dotenv()
 
 # Construct the database URL using environment variables
 DATABASE_URL = f"postgresql+asyncpg://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
-print(DATABASE_URL)
+# print(DATABASE_URL)
 if not DATABASE_URL:
     raise ValueError("Database configuration is incomplete.")
 
