@@ -1,3 +1,4 @@
+from datetime import date
 from pydantic import BaseModel, Field, EmailStr
 
 # ... means that the field is required
@@ -44,4 +45,12 @@ class VerifyOtpRequest(BaseModel):
     email: EmailStr
     otp: str
 
+class UserUpdate(BaseModel):
+    full_name: str | None = Field(None, min_length=3, max_length=80)
+    username: str = Field(..., min_length=3, max_length=50)
+    date_of_birth: date = Field(..., description="YYYY-MM-DD")  # YYYY-MM-DD format
+    bio: str = Field(..., max_length=1000)
+    photo: str | None = None 
 
+    class Config:
+        orm_mode = True
