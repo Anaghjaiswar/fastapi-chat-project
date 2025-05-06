@@ -6,6 +6,8 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from routers import auth, user, chat
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from config import redis_client
 
 
 app = FastAPI()
@@ -28,8 +30,14 @@ async def root():
     return {"message": "Hello, FastAPI with NeonDB!"}
 
 
-# @app.on_event("startup")
-# async def startup_event():
-#     pass
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup logic
+    await redis_client.ping()                   
+    yield                                        
+    # shutdown logic
+    await redis_client.close()                 
+
+app = FastAPI(lifespan=lifespan) 
 
 

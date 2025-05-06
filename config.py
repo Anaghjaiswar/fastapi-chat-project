@@ -1,7 +1,10 @@
+import ssl
 import cloudinary
 import os
 from fastapi_mail import ConnectionConfig, FastMail
 from dotenv import load_dotenv
+import redis.asyncio as redis
+from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -26,4 +29,14 @@ conf = ConnectionConfig(
     MAIL_SERVER   = "smtp.gmail.com",
     MAIL_STARTTLS = True,      
     MAIL_SSL_TLS  = False      
+)
+
+
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
+    username=os.getenv("REDIS_USERNAME"),
+    password=os.getenv("REDIS_PASSWORD"),
+    db=int(os.getenv("REDIS_DB", 0)),
+    decode_responses=os.getenv("REDIS_DECODE_RESPONSES", "True") == "True",
 )

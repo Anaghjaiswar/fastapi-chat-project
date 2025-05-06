@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -49,6 +50,7 @@ async def ws_room(
         return
     
     await manager.connect(websocket, "room", room_id)
+    asyncio.create_task(manager.listen_to_redis("room", room_id))
 
     try:
         while True:
@@ -84,6 +86,7 @@ async def ws_direct(
         return
 
     await manager.connect(websocket, "direct", chat_id)
+    asyncio.create_task(manager.listen_to_redis("direct", chat_id))
     try:
         while True:
             data = await websocket.receive_json()
