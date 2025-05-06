@@ -35,3 +35,13 @@ class RefreshRequest(BaseModel):
 
 class LogoutResponse(BaseModel):
     msg: str
+
+
+class SendOtpRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+

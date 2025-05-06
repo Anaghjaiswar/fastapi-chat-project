@@ -1,6 +1,6 @@
 from typing import Union
 from pydantic import BaseModel
-from sqlalchemy import Column, Date, DateTime, Integer, String, Boolean, func
+from sqlalchemy import Column, Date, DateTime, Float, Integer, String, Boolean, func
 from database import Base
 from pytz import timezone
 from datetime import datetime
@@ -19,5 +19,7 @@ class User(Base):
     bio = Column(String(1000))
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    otp_hash = Column(String, nullable=True)   # new
+    otp_expiry = Column(Float,  nullable=True) 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone('Asia/Kolkata')))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone('Asia/Kolkata')), onupdate=lambda: datetime.now(timezone("Asia/Kolkata")))
