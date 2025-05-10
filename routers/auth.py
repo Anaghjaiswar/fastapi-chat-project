@@ -9,14 +9,14 @@ import models as models
 from database import get_db
 from models import User
 from helper import create_access_token, create_refresh_token, generate_otp, send_email, verify_hashed_otp, verify_password, decode_token, hash_otp
-
+from fastapi import Response
 from sqlalchemy.future import select
 
 
 router = APIRouter()
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login_user(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     result = await db.execute(select(models.User).filter(models.User.email == form_data.username.lower()))
     user = result.scalars().first()
     if not user:
@@ -28,11 +28,27 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Sessi
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token({ "sub": user.email })
 
-    return {
-        "access_token":  access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,        # only over HTTPS/WSS in production
+        samesite="lax",     # or "strict"
+        max_age=15 * 60,    # e.g. 15 minutes
+        path="/",           # send cookie on all paths
+    )
+    # — refresh token cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=7 * 24 * 3600,  # e.g. 7 days
+        path="/",
+    )
+
+    return {"message": "Login successful"}
 
 
 @router.post("/token/refresh", response_model=Token)

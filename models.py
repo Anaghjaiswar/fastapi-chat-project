@@ -96,9 +96,18 @@ class Message(Base):
     mentions = relationship("User", secondary=message_mentions, backref="mentioned_in")
     replies = relationship(
         "Message",
-        backref=relationship("parent", remote_side=[id]),
-        cascade="all, delete-orphan"
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        single_parent=True
     )
+
+    # the "many"‑side: each reply has exactly one parent
+    parent = relationship(
+        "Message",
+        back_populates="replies",
+        remote_side=[id]
+    )
+
 
 class UserRoomStatus(Base):
     __tablename__ = "user_room_statuses"
