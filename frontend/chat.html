@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+    }
+    #messages {
+      border: 1px solid #ccc;
+      height: 300px;
+      overflow-y: scroll;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: #fafafa;
+    }
+    #messages .msg {
+      margin-bottom: 0.5rem;
+    }
+    #messages .msg .sender {
+      font-weight: bold;
+    }
+    #input-area {
+      display: flex;
+    }
+    #input-area input {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    #input-area button {
+      padding: 0.5rem 1rem;
+      margin-left: 0.5rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Chat</h2>
+  <div id="messages"></div>
+
+  <div id="input-area">
+    <input id="msgInput" placeholder="Type a message…" autocomplete="off" />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <script>
+    // Replace with your chat_id (could be passed via query-string or chosen UI)
+    const chatId = new URLSearchParams(window.location.search).get("chat_id") || "1";
+    const API_HOST = window.location.hostname + ":8000"; 
+    const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${wsProtocol}://${API_HOST}/chat/ws/direct/${chatId}`;
+    console.log(wsProtocol);
+
+    const messagesDiv = document.getElementById("messages");
+    const input = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    let ws;
+
+    function addMessage(sender, text, ts) {
+      const el = document.createElement("div");
+      el.classList.add("msg");
+      el.innerHTML = `<span class="sender">${sender}:</span> ${text} <span style="font-size:0.8em;color:#888">(${new Date(ts).toLocaleTimeString()})</span>`;
+      messagesDiv.appendChild(el);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function connect() {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log("WebSocket open");
+      };
+
+      ws.onmessage = ev => {
+        try {
+          const msg = JSON.parse(ev.data);
+          addMessage(msg.sender_id, msg.content, msg.timestamp);
+        } catch (e) {
+          console.error("Invalid message", ev.data);
+        }
+      };
+
+      ws.onclose = ev => {
+        console.log("WebSocket closed, reconnecting in 2s", ev);
+        setTimeout(connect, 2000);
+      };
+
+      ws.onerror = err => {
+        console.error("WebSocket error", err);
+        ws.close();
+      };
+    }
+
+    sendBtn.onclick = () => {
+      const text = input.value.trim();
+      if (!text || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ content: text, type: "text" }));
+      input.value = "";
+    };
+
+    input.addEventListener("keyup", e => {
+      if (e.key === "Enter") sendBtn.click();
+    });
+
+    // start
+    connect();
+  </script>
+
+</body>
+</html>

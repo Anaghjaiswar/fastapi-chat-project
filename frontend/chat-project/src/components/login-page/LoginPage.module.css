@@ -1,0 +1,123 @@
+/* LoginPage.module.css */
+
+/* Container for the entire login page */
+.LoginPage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+  background: url('https://res.cloudinary.com/dy1a8nyco/image/upload/v1746806870/ijbirnua30syfhpkog87.png')
+    no-repeat center center fixed;
+  background-size: cover;
+  width: 100vw;
+}
+
+/* The <form> wrapper */
+.form {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 360px;
+}
+
+/* Heading at top of form */
+.heading {
+  font-size: 1.5rem;
+  color: #333;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Labels for inputs */
+.label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 0.25rem;
+}
+
+/* Text inputs and password field */
+.input {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* Style applied when validation fails */
+.invalid {
+  border-color: #dc3545 !important;
+}
+
+/* Error message text */
+.error {
+  color: #dc3545;
+  font-size: 0.8rem;
+  margin-top: -0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Submit button */
+.LoginButton {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.LoginButton:hover {
+  background-color: #0056b3;
+}
+
+/* Remember me checkbox wrapper */
+.rememberMe {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* Checkbox input itself */
+.checkbox {
+  margin-right: 0.5rem;
+  transform: scale(1.1);
+}
+
+/* Label for the checkbox */
+.checkboxLabel {
+  font-size: 0.9rem;
+  color: #444;
+}
+
+/* Sign‑up link at bottom */
+.signupDirection {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.signupDirection a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.signupDirection a:hover {
+  text-decoration: underline;
+}

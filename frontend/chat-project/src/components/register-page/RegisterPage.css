@@ -1,0 +1,159 @@
+/* RegisterPage.css */
+
+body {
+  font-family: Arial, sans-serif;
+  /* background-color: #f9f9f9; */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  /* margin-top: 1vh; */
+}
+
+.RegisterPage {
+  display: flex;
+  width: 100%;
+  background: #fffefe;
+  border-radius: 10px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.RegisterPage__form {
+  flex: 1;
+  padding: 30px;
+  /* padding-bottom: 20px; */
+}
+
+h2 {
+  text-align: left;
+  font-size:x-large
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-size:small;
+  margin-top: 10px;
+}
+
+input {
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #666666;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.error {
+  color: #EE1D52;
+  font-size: smaller;
+
+}
+
+.promotions {
+  /* display: flex; */
+  /* align-items: center; */
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+  margin-top: 10px;
+}
+
+.promotions input {
+  margin-right: 0.5vw;
+}
+
+.terms {
+  font-size:small;
+  text-align: left;
+  margin-top: 1vh;
+}
+
+.login-direction{
+    font-size: small;
+    margin-top: 1vh;
+}
+
+.RegisterButton {
+  background:#666666; /* Default color */
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background 0.3s ease;
+  width: fit-content; /* Keeps it minimal */
+}
+
+.RegisterButton:hover {
+  background: linear-gradient(45deg, #ff85a2, #ff4d79); /* Gradient pink */
+}
+
+.RegisterPage__image {
+  flex: 1;
+  display: flex;
+  /* justify-content: center;
+  align-items: center; */
+  height: 100;
+}
+
+.RegisterPage__image img {
+  max-width: 100%;
+  /* height: auto; */
+  height: 100%;
+  background-size: cover;
+}
+
+/* Password Rules Styling */
+.password-rules {
+  background-color: #f3f3f3; /* Light color */
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 3vh;
+}
+
+.password-rules ul {
+  list-style-type: disc; /* Bullet points */
+  padding-left: 20px;
+}
+
+.password-rules li {
+  margin: 5px 0;
+}
+
+.valid {
+  color: green;
+}
+
+.invalid {
+  color: #EE1D52;
+}
+
+.promotions-text{
+    margin-top: 0.2vh;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .RegisterPage {
+    flex-direction: column;
+  }
+
+  .RegisterPage__image {
+    display: none;
+  }
+}
