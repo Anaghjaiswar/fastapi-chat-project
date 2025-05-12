@@ -80,12 +80,12 @@ async def logout_user(body: RefreshRequest):
 
 
 @router.post("/send-otp", status_code=status.HTTP_200_OK)
-async def send_otp(email: str, request: SendOtpRequest, background_tasks: BackgroundTasks,db: Session = Depends(get_db)) -> Any:
+async def send_otp(request: SendOtpRequest, background_tasks: BackgroundTasks,db: Session = Depends(get_db)) -> Any:
     result = await db.execute(select(User).filter(models.User.email == request.email.lower()))
     user = result.scalars().first()
 
     if not user: 
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="USer not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
     if user.is_verified:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already Verified")
@@ -106,7 +106,7 @@ async def send_otp(email: str, request: SendOtpRequest, background_tasks: Backgr
     }
 
 
-@router.post("/verify-otp", status_code=status.HTTP_200_OK)
+@router.post("/verify-email", status_code=status.HTTP_200_OK)
 async def verify_otp_endpoint(request: VerifyOtpRequest,db: Session = Depends(get_db)) -> Any:
     result = await db.execute(select(User).filter(User.email == request.email.lower()))
     user = result.scalars().first()

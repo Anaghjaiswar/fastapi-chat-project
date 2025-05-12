@@ -20,7 +20,7 @@ app = FastAPI(lifespan=lifespan)
 # replace this with the exact origin (scheme + host + port) where your HTML/JS is served
 origins = [
     "http://127.0.0.1:5500",   
-    "http://127.0.0.1:5173",
+    "http://localhost:5173",
     "http://localhost:8000",    # if you serve static from FastAPI
     "null",                     # needed if you open file://…/login.html in browser
 ]

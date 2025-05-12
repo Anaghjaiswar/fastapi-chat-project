@@ -1,26 +1,31 @@
 import React, { useState } from 'react';
 import './RegisterPage.css';
-import { Link } from 'react-router-dom';
+import { registerUser } from '../../api/Register';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Register() {
+  const navigate = useNavigate();   
   const [form, setForm] = useState({
-    fullname: '',
+    full_name: '',
     email: '',
     username: '',
     password: '',
     promotions: false,
   });
   const [errors, setErrors] = useState({});
+   const [generalError, setGeneralError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
     setErrors(errs => ({ ...errs, [name]: null }));
+    setGeneralError('');
   };
 
   const validate = () => {
     const errs = {};
-    if (!form.fullname) errs.fullname = 'Full name is required';
+    if (!form.full_name) errs.full_name = 'Full name is required';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = 'Invalid email';
     if (!form.username) errs.username = 'Username is required';
@@ -28,31 +33,40 @@ export default function Register() {
     return errs;
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) return setErrors(errs);
-    // dispatch API call…
+    const fielderrs = validate();
+    if (Object.keys(fielderrs).length) return setErrors(fielderrs);
+    setLoading(true);
+
+    try {
+      await registerUser(form);
+      navigate('/login');
+    } catch (err) {
+      setGeneralError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const passwordEntered = form.password.length > 0;
+  // const passwordEntered = form.password.length > 0;
   
   return (
     <div className="RegisterPage">
       <div className="RegisterPage__form">
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit}>
           <h2>Welcome to the chat community</h2>
 
-          <label htmlFor="fullname">Full Name</label>
+          <label htmlFor="full_name">Full Name</label>
           <input
-            id="fullname"
-            name="fullname"
+            id="full_name"
+            name="full_name"
             type="text"
-            value={form.fullname}
+            value={form.full_name}
             onChange={handleChange}
-            aria-invalid={!!errors.fullname}
+            aria-invalid={!!errors.full_name}
           />
-          {errors.fullname && <p className="error">{errors.fullname}</p>}
+          {errors.full_name && <p className="error">{errors.full_name}</p>}
 
           <label htmlFor="email">Email</label>
           <input
@@ -86,6 +100,8 @@ export default function Register() {
             aria-invalid={!!errors.password}
           />
           {errors.password && <p className="error">{errors.password}</p>}
+
+           {generalError && <p className="error">{generalError}</p>}
 
           <fieldset className="password-rules">
             <legend>Password must contain:</legend>
@@ -129,9 +145,10 @@ export default function Register() {
             <a href="#">Privacy Policy</a>.
           </p>
 
-          <button type="submit" className="RegisterButton">
-            Create account
+          <button type="submit" className="RegisterButton" disabled={loading}>
+            {loading ? 'Creating…' : 'Create account'}
           </button>
+
 
           <p className="login-direction">
             Already have an account? <Link to="/login">Log in</Link>
