@@ -69,6 +69,17 @@ async def send_email(subject: str, email_to: List[str], body: str, subtype: str 
         subtype=subtype  
     )
     await fast_mail.send_message(message)
+
+def mark_email_verified(email: str, ttl_seconds: int = 600):
+    key = f"verified:{email}"
+    redis_client.setex(key, ttl_seconds, "1")
+
+def is_email_verified(email: str) -> bool:
+    return redis_client.exists(f"verified:{email}") == 1
+
+def clear_email_verified(email: str):
+    redis_client.delete(f"verified:{email}")
+
     
 # 
 # ~~~~~~OTP functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,6 +95,27 @@ def hash_otp(otp: str) -> str:
 
 def verify_hashed_otp(plain_otp: str, hashed_otp: str, expiry: float) -> bool:
     return pwd_context.verify(plain_otp, hashed_otp) and time.time() < expiry
+
+def store_otp_in_redis(email: str, hashed_otp: str, ttl_seconds: int = 300) -> None:
+    """
+    Store hashed OTP under key otp:{email}, expire after ttl_seconds.
+    """
+    key = f"otp:{email}"
+    redis_client.setex(key, ttl_seconds, hashed_otp)
+
+def get_hashed_otp_from_redis(email: str) -> str | None:
+    """
+    Retrieve the hashed OTP for this email, or None if missing/expired.
+    """
+    key = f"otp:{email}"
+    return redis_client.get(key)
+
+def delete_otp_from_redis(email: str) -> None:
+    """
+    Remove the OTP entry after successful verification.
+    """
+    key = f"otp:{email}"
+    redis_client.delete(key)
 
 
 # 
