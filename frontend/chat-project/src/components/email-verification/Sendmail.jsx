@@ -38,7 +38,7 @@ export default function Sendmail() {
       <div className={styles.container}>
         <h2 className={styles.heading}>Enter E-mail Address</h2>
         <p className={styles.description}>
-          enter the email address associated with your account.
+          Please Enter you Email address to Continue
         </p>
         <form onSubmit={handleSubmit} className={styles.form}>
           <fieldset className={styles.fieldset}>

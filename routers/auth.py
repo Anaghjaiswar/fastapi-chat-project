@@ -1,6 +1,6 @@
 import time,models
 from typing import Any
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -34,17 +34,53 @@ async def login_user(
     refresh_token = create_refresh_token({"sub": user.email})
 
     # Set HttpOnly cookies
-    response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite="lax", max_age=15*60, path="/")
-    response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite="lax", max_age=7*24*3600, path="/")
+    response.set_cookie("access_token", access_token, httponly=True, secure=False, samesite="lax", max_age=15*60, path="/")
+    response.set_cookie("refresh_token", refresh_token, httponly=True, secure=False, samesite="lax", max_age=7*24*3600, path="/")
 
     return {"message": "Login successful"}
 
 
-@router.post("/token/refresh", response_model=Token)
-async def refresh_token(body: RefreshRequest):
-    payload = decode_token(body.refresh_token, token_type="refresh")
+@router.post("/token/refresh", status_code=status.HTTP_200_OK)
+async def refresh_token_cookie(request: Request, response: Response):
+    # read refresh_token from HTTP-only cookie
+    rt = request.cookies.get("refresh_token")
+    if not rt:
+        raise HTTPException(status_code=401, detail="No refresh token cookie")
+    # validate it
+    try:
+        payload = decode_token(rt, token_type="refresh")
+    except:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    # create & set new access token cookie
     new_access = create_access_token({"sub": payload["sub"]})
-    return {"access_token": new_access, "token_type": "bearer"}
+    response.set_cookie(
+        key="access_token",
+        value=new_access,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=15*60,
+        path="/"
+    )
+    return {"message": "Access token refreshed"}
+
+
+
+@router.get("/verify", status_code=status.HTTP_200_OK)
+async def verify_token_cookie(request: Request):
+    # read access_token from HTTP-only cookie
+    at = request.cookies.get("access_token")
+    if not at:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    # validate it
+    print(at)
+    try:
+        payload = decode_token(at, token_type="access")
+    except:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return {"message": "Token valid", "user": payload["sub"]}
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
@@ -73,11 +109,11 @@ async def send_otp_endpoint(
     otp_plain, expiry_ts = generate_otp()
     otp_hashed = hash_otp(otp_plain)
 
-    store_otp_in_redis(email, otp_hashed, ttl_seconds=300)
+    await store_otp_in_redis(email, otp_hashed, ttl_seconds=300)
 
     subject = "Your verification code"
     body = f"Your OTP is: {otp_plain}. It expires in 5 minutes."
-    background_tasks.add_task(send_email, [email], subject, body)
+    background_tasks.add_task(send_email, subject, [email], body)
 
     return {"message": "OTP sent successfully"}
 
@@ -90,15 +126,15 @@ async def verify_otp_endpoint(
     db: AsyncSession = Depends(get_db)
 ):
     email = request.email.lower()
-    hashed = get_hashed_otp_from_redis(email)
+    hashed = await get_hashed_otp_from_redis(email)
     if not hashed:
         raise HTTPException(status_code=400, detail="OTP expired or not found")
 
     if not verify_hashed_otp(request.otp, hashed, expiry=time.time() + 1):
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    delete_otp_from_redis(email)
-    mark_email_verified(email, ttl_seconds=600)  # keep verified flag alive for 10 minutes
+    await delete_otp_from_redis(email)
+    await mark_email_verified(email, ttl_seconds=600)  # keep verified flag alive for 10 minutes
 
     return {"message": "OTP verified successfully"}
 
@@ -113,11 +149,10 @@ async def register_user(
 ):
     email = user.email.lower()
 
-    # 1️⃣ Check OTP verification in Redis
-    if not is_email_verified(email):
+
+    if not await is_email_verified(email):
         raise HTTPException(status_code=400, detail="Email not verified")
 
-    # 2️⃣ Check username/email uniqueness
     result = await db.execute(select(models.User).filter(models.User.username == user.username))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="Username already exists")
@@ -126,20 +161,20 @@ async def register_user(
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    # 3️⃣ Persist the user
     hashed_password = hash_password(user.password)
     new_user = models.User(
         username=user.username,
         email=email,
         full_name=user.full_name,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        is_verified=True
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
 
-    clear_email_verified(email)
+    await clear_email_verified(email)
 
     access_token  = create_access_token({"sub": email})
     refresh_token = create_refresh_token({"sub": email})
@@ -148,7 +183,7 @@ async def register_user(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,         # in prod HTTPS only
+        secure=False,         # in prod HTTPS only
         samesite="lax",
         max_age=15 * 60,
         path="/"
@@ -157,7 +192,7 @@ async def register_user(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
+        secure=False,
         samesite="lax",
         max_age=7 * 24 * 3600,
         path="/"

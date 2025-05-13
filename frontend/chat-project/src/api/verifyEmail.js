@@ -1,5 +1,5 @@
 export async function verifyEmail(data){
-    const res = await fetch("http://127.0.0.1:8000/auth/verify-email",{
+    const res = await fetch("http://localhost:8000/auth/verify-otp",{
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

@@ -51,7 +51,7 @@ export async function fetchWithAuth(url, options = {}) {
       });
     }
 
-    return response; // If not 401, return the original response
+    return response; 
   } catch (error) {
     console.error('Fetch error:', error);
     throw error;

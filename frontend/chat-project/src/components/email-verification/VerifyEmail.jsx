@@ -51,7 +51,7 @@ export default function VerifyEmail() {
     setLoading(true);
     try {
       await verifyEmail({ email, otp: code });
-      navigate('/login');
+      navigate('/register', { state: { email } });
     } catch (err) {
       setError(err.message);
     } finally {

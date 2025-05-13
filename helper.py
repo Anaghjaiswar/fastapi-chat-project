@@ -30,7 +30,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
     to_encode = data.copy()
     expire = datetime.now() + expires_delta
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -70,15 +70,15 @@ async def send_email(subject: str, email_to: List[str], body: str, subtype: str 
     )
     await fast_mail.send_message(message)
 
-def mark_email_verified(email: str, ttl_seconds: int = 600):
+async def mark_email_verified(email: str, ttl_seconds: int = 600):
     key = f"verified:{email}"
-    redis_client.setex(key, ttl_seconds, "1")
+    await redis_client.setex(key, ttl_seconds, "1")
 
-def is_email_verified(email: str) -> bool:
-    return redis_client.exists(f"verified:{email}") == 1
+async def is_email_verified(email: str) -> bool:
+    return await redis_client.exists(f"verified:{email}") == 1
 
-def clear_email_verified(email: str):
-    redis_client.delete(f"verified:{email}")
+async def clear_email_verified(email: str):
+    await redis_client.delete(f"verified:{email}")
 
     
 # 
@@ -96,26 +96,26 @@ def hash_otp(otp: str) -> str:
 def verify_hashed_otp(plain_otp: str, hashed_otp: str, expiry: float) -> bool:
     return pwd_context.verify(plain_otp, hashed_otp) and time.time() < expiry
 
-def store_otp_in_redis(email: str, hashed_otp: str, ttl_seconds: int = 300) -> None:
+async def store_otp_in_redis(email: str, hashed_otp: str, ttl_seconds: int = 300) -> None:
     """
     Store hashed OTP under key otp:{email}, expire after ttl_seconds.
     """
     key = f"otp:{email}"
-    redis_client.setex(key, ttl_seconds, hashed_otp)
+    await redis_client.setex(key, ttl_seconds, hashed_otp)
 
-def get_hashed_otp_from_redis(email: str) -> str | None:
+async def get_hashed_otp_from_redis(email: str) -> str | None:
     """
     Retrieve the hashed OTP for this email, or None if missing/expired.
     """
     key = f"otp:{email}"
-    return redis_client.get(key)
+    return await redis_client.get(key)
 
-def delete_otp_from_redis(email: str) -> None:
+async def delete_otp_from_redis(email: str) -> None:
     """
     Remove the OTP entry after successful verification.
     """
     key = f"otp:{email}"
-    redis_client.delete(key)
+    await redis_client.delete(key)
 
 
 # 

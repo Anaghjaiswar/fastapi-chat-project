@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import './RegisterPage.css';
 import { registerUser } from '../../api/Register';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Register() {
   const navigate = useNavigate();   
+  const location = useLocation();
+  const email = location.state?.email || "";
   const [form, setForm] = useState({
     full_name: '',
-    email: '',
     username: '',
     password: '',
     promotions: false,
@@ -26,8 +27,6 @@ export default function Register() {
   const validate = () => {
     const errs = {};
     if (!form.full_name) errs.full_name = 'Full name is required';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = 'Invalid email';
     if (!form.username) errs.username = 'Username is required';
     if (form.password.length < 8) errs.password = 'Password too short';
     return errs;
@@ -40,8 +39,8 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await registerUser(form);
-      navigate('/login');
+      await registerUser({...form, email});
+      navigate('/chat');
     } catch (err) {
       setGeneralError(err.message);
     } finally {
@@ -67,17 +66,6 @@ export default function Register() {
             aria-invalid={!!errors.full_name}
           />
           {errors.full_name && <p className="error">{errors.full_name}</p>}
-
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            aria-invalid={!!errors.email}
-          />
-          {errors.email && <p className="error">{errors.email}</p>}
 
           <label htmlFor="username">Username</label>
           <input

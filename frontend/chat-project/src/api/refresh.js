@@ -1,9 +1,9 @@
-export async function refreshAccessToken(data) {
-  const response = await fetch('http://127.0.0.1:8000/auth/token/refresh', {
+export async function refreshAccessToken() {
+  const response = await fetch('http://localhost:8000/auth/token/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include', // will attach HttpOnly refresh cookie if present
-    body: JSON.stringify(data)
+    // body: JSON.stringify(data)
   });
 
   const payload = await response.json();
