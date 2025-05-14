@@ -4,6 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from config import redis_client
 from database import get_db
 from helper import *
 from schemas import (
@@ -101,6 +102,19 @@ async def send_otp_endpoint(
     db: AsyncSession = Depends(get_db)
 ):
     email = request.email.lower()
+
+    redis_key = f"otp Attempts: {email}"
+    attempts = await redis_client.get(redis_key)
+
+    # rate limiting
+    if attempts and int(attempts) >= 3:
+        raise HTTPException(status_code=429, detail="Too many requests Try again after 10 minutes.")
+    
+    pipeline = redis_client.pipeline()
+    pipeline.incr(redis_key)
+    pipeline.expire(redis_key, 600)
+    await pipeline.execute()
+    
     # Email must not already exist
     result = await db.execute(select(models.User).filter(models.User.email == email))
     if result.scalars().first():
