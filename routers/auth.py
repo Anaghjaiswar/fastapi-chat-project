@@ -181,7 +181,7 @@ async def register_user(
         email=email,
         full_name=user.full_name,
         hashed_password=hashed_password,
-        is_verified=True
+        # is_verified=True
     )
     db.add(new_user)
     await db.commit()

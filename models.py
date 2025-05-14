@@ -1,12 +1,42 @@
+import enum
 from typing import Union
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, Date, DateTime, Float, ForeignKey, Integer, String, Boolean, Table, Text, func
+from sqlalchemy import JSON, Column, Date, DateTime, Float, ForeignKey, Integer, String, Boolean, Table, Text, func, Enum
 from database import Base
 from pytz import timezone
 from datetime import datetime
 from sqlalchemy.orm import relationship
 
+class RequestStatus(str, enum.Enum):
+    PENDING  = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
+
+class FriendRequest(Base):
+    __tablename__ = "friend_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    from_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(Enum(RequestStatus), default=RequestStatus.PENDING)
+    created_at  = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone('Asia/Kolkata')))
+    from_user = relationship("User", foreign_keys=[from_user_id], back_populates="sent_requests")
+    to_user = relationship("User", foreign_keys=[to_user_id], back_populates="received_requests")
+
+
+# association table for accepted friendships
+friendship = Table(
+    "friendship",
+    Base.metadata,
+    Column("user_id",   Integer, ForeignKey("users.id"), primary_key=True),
+    Column("friend_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column(
+      "since",
+      DateTime(timezone=True),
+      default=lambda: datetime.now(timezone("Asia/Kolkata"))
+    ),
+)
 
 class User(Base):
     __tablename__ = "users"
@@ -22,6 +52,15 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     otp_hash = Column(String, nullable=True)   # new
     otp_expiry = Column(Float,  nullable=True) 
+    sent_requests = relationship("FriendRequest", foreign_keys="[FriendRequest.from_user_id]", back_populates="from_user")
+    received_requests = relationship("FriendRequest", foreign_keys="[FriendRequest.to_user_id]",   back_populates="to_user")
+    friends = relationship(
+        "User",
+        secondary=friendship,
+        primaryjoin=id == friendship.c.user_id,
+        secondaryjoin=id == friendship.c.friend_id,
+        backref="friend_of"
+    )
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone('Asia/Kolkata')))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone('Asia/Kolkata')), onupdate=lambda: datetime.now(timezone("Asia/Kolkata")))
 
