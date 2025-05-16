@@ -1,5 +1,8 @@
 from datetime import date, datetime
+# from sqlalchemy import Enum
+from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
+from enum import Enum
 
 # ... means that the field is required
 
@@ -81,3 +84,31 @@ class GroupChatRead(BaseModel):
 # class GroupChatCreate(BaseModel):
 #     created_by_id
     
+
+class UserSummary(BaseModel):
+    id: int
+    full_name: str
+    photo: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+class RequestStatusEnum(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+class FriendRequestCreate(BaseModel):
+    to_user_id: int
+
+
+
+class FriendRequestResponse(BaseModel):
+    id: int
+    from_user_id: int
+    to_user_id: int
+    status: RequestStatusEnum
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

@@ -1,37 +1,27 @@
-// src/components/verify-email/VerifyEmail.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import styles from './VerifyEmail.module.css';
-import { verifyEmail } from '../../api/verifyEmail';
+import { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { verifyOtp } from '../../api/verifyOtp';
+import styles from './VerifyOtp.module.css';
 
-export default function VerifyEmail() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const email = location.state?.email || '';
-
+export default function VerifyOtp({ email, onNext, onBack }) {
   const [otp, setOtp] = useState(new Array(6).fill(''));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const inputsRef = useRef([]);
 
-  // Auto-focus first box on mount
+  // autofocus first input
   useEffect(() => {
     inputsRef.current[0]?.focus();
   }, []);
 
   const handleChange = (e, idx) => {
     const val = e.target.value;
-    if (!/^\d?$/.test(val)) return;  // only digit or empty
-
-    const nextOtp = [...otp];
-    nextOtp[idx] = val;
-    setOtp(nextOtp);
+    if (!/^\d?$/.test(val)) return;
+    const next = [...otp];
+    next[idx] = val;
+    setOtp(next);
     setError('');
-
-    // Move focus forward
-    if (val && idx < otp.length - 1) {
-      inputsRef.current[idx + 1].focus();
-    }
+    if (val && idx < otp.length - 1) inputsRef.current[idx + 1].focus();
   };
 
   const handleKeyDown = (e, idx) => {
@@ -47,13 +37,12 @@ export default function VerifyEmail() {
       setError('Please enter the full 6-digit code.');
       return;
     }
-
     setLoading(true);
     try {
-      await verifyEmail({ email, otp: code });
-      navigate('/register', { state: { email } });
+      await verifyOtp({ email, otp: code });
+      onNext({ otpCode: code });
     } catch (err) {
-      setError(err.message);
+      setError(err.detail || err.message || 'Verification failed');
     } finally {
       setLoading(false);
     }
@@ -61,9 +50,8 @@ export default function VerifyEmail() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.heading}>Verify Your Email</h2>
-      <p className={styles.subheading}>We’ve sent a 6-digit code to {email}</p>
-
+      <h2 className={styles.heading}>Enter OTP</h2>
+      <p className={styles.description}>A 6-digit code was sent to {email}.</p>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.otpInputs}>
           {otp.map((digit, idx) => (
@@ -71,27 +59,32 @@ export default function VerifyEmail() {
               key={idx}
               type="text"
               inputMode="numeric"
-              maxLength="1"
-              className={styles.otpInput}
+              maxLength={1}
               value={digit}
               ref={(el) => (inputsRef.current[idx] = el)}
               onChange={(e) => handleChange(e, idx)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
+              className={styles.otpInput}
               aria-label={`Digit ${idx + 1}`}
             />
           ))}
         </div>
-
         {error && <p className={styles.error}>{error}</p>}
-
-        <button
-          type="submit"
-          className={styles.submitButton}
-          disabled={loading}
-        >
-          {loading ? 'Verifying...' : 'Verify Email'}
-        </button>
+        <div className={styles.buttonRow}>
+          <button type="button" onClick={onBack} className={styles.backButton} disabled={loading}>
+            Back
+          </button>
+          <button type="submit" className={styles.submitButton} disabled={loading}>
+            {loading ? 'Verifying...' : 'Verify'}
+          </button>
+        </div>
       </form>
     </div>
   );
 }
+
+VerifyOtp.propTypes = {
+  email: PropTypes.string.isRequired,
+  onNext: PropTypes.func.isRequired,
+  onBack: PropTypes.func.isRequired,
+};

@@ -1,4 +1,4 @@
-import { refreshAccessToken } from './api/refresh';
+import { refreshAccessToken } from '../api/refresh';
 
 let isRefreshing = false;
 let subscribers = [];

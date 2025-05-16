@@ -2,7 +2,7 @@ export async function registerUser(data){
     console.log("data: ", data);
     const res = await fetch("http://localhost:8000/user/register",{
         method: "POST",
-        // credentials: "include",
+       
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)  
     })

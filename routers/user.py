@@ -1,11 +1,11 @@
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.future import select
 from dependencies import get_current_user
-from models import User
-from schemas import UserCreate, UserOut , UserUpdate
+from models import FriendRequest, User
+from schemas import FriendRequestCreate, FriendRequestResponse, UserCreate, UserOut , UserUpdate, UserSummary
 from helper import hash_password, upload_file_to_cloudinary
 from database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,3 +87,51 @@ async def update_user(
     await db.commit()
     await db.refresh(current_user)
     return current_user
+
+
+@router.get("/list",response_model=List[UserSummary], status_code=status.HTTP_200_OK)
+async def list_users(me: User = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id != me.id))
+
+    users = result.scalars().all()
+    print (users)
+
+
+    return users
+
+@router.post("/send-request", response_model=FriendRequestResponse, status_code=status.HTTP_201_CREATED)
+async def send_request(request: FriendRequestCreate, me: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    
+    to_user_id = request.to_user_id
+    result = await db.execute(select(User).where(User.id == to_user_id))
+    to_user = result.scalar_one_or_none()
+
+    if not to_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    
+    result = await db.execute(
+        select(FriendRequest)
+        .where(
+            (FriendRequest.from_user_id == me.id)
+            & (FriendRequest.to_user_id == to_user_id)
+        )
+        .options(joinedload(FriendRequest.from_user), joinedload(FriendRequest.to_user))
+    )
+    existing_request = result.scalar_one_or_none()
+
+    if existing_request:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Friend request already exists with status: {existing_request.status}.",
+        )
+    
+    new_request = FriendRequest(from_user_id = me.id, to_user_id=to_user_id)
+
+    db.add(new_request)
+    await db.commit()
+    await db.refresh(new_request)
+
+    return new_request
+
+    

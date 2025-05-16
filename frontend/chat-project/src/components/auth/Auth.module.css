@@ -1,0 +1,52 @@
+/* Container for the entire auth flow */
+.authBox {
+  width: 60vw;
+  padding: 2rem;
+  background: #eae8e6;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Animation for entry */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Progress indicator circles */
+.flowBox {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ccc;
+  transition: background 0.3s, transform 0.3s;
+}
+
+.circle.active {
+  background: #4caf50;
+  transform: scale(1.4);
+}
+
+/* Inner container to align forms consistently */
+.container {
+  position: relative;
+}
+
+/* Shared fade animation for each step's container */
+.container > * {
+  animation: fadeIn 0.4s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

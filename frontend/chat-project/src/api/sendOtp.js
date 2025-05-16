@@ -1,8 +1,10 @@
-export async function sendVerificationMail(data){
+export async function sendOtp(data){
     const res = await fetch("http://localhost:8000/auth/send-otp", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
+        
     })
     console.log("res: ", res);
 

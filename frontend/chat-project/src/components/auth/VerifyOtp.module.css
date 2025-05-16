@@ -1,0 +1,132 @@
+/* Container for the OTP verification step */
+.container {
+  width: 100%;
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  animation: slideIn 0.4s ease-out;
+}
+
+/* Slide-in animation from top */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Heading style */
+.heading {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+/* Description text */
+.description {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+/* Form layout */
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* OTP input container */
+.otpInputs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Individual OTP input boxes */
+.otpInput {
+  width: 2.5rem;
+  height: 2.5rem;
+  text-align: center;
+  font-size: 1.25rem;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.otpInput:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 4px #4caf50;
+}
+
+/* Error message below inputs */
+.error {
+  width: 100%;
+  color: #e74c3c;
+  font-size: 0.875rem;
+  margin-top: -0.5rem;
+  text-align: center;
+}
+
+/* Button container row */
+.buttonRow {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 360px;
+  gap: 1rem;
+}
+
+/* Back button style */
+.backButton {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.3s, border-color 0.3s;
+}
+.backButton:hover {
+  border-color: #999;
+}
+.backButton:disabled {
+  border-color: #ddd;
+  cursor: not-allowed;
+}
+
+/* Submit (Verify) button style */
+.submitButton {
+  flex: 2;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, #4caf50, #81c784);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+.submitButton:hover {
+  background: linear-gradient(135deg, #43a047, #66bb6a);
+}
+.submitButton:active {
+  transform: scale(0.98);
+}
+.submitButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
