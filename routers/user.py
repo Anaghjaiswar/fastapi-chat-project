@@ -1,10 +1,10 @@
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.future import select
 from dependencies import get_current_user
-from sqlalchemy import exists, and_
+from sqlalchemy import delete, exists, and_
 from models import FriendRequest, RequestStatus, User, friendship
 from schemas import *
 from helper import hash_password, upload_file_to_cloudinary
@@ -94,10 +94,16 @@ async def update_user(
 async def list_users(me: User = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
    
     # exclude pending requests only
-    pending = exists().where(
+    pending_outgoing = exists().where(
         FriendRequest.from_user_id == me.id,
         FriendRequest.to_user_id   == User.id,
         FriendRequest.status == RequestStatus.PENDING
+    )
+
+    pending_incoming = exists().where(
+       FriendRequest.to_user_id   == me.id,
+        FriendRequest.from_user_id == User.id,
+        FriendRequest.status       == RequestStatus.PENDING,
     )
 
     # exclude already‐friends
@@ -109,7 +115,8 @@ async def list_users(me: User = Depends(get_current_user),db: AsyncSession = Dep
     q = (
         select(User)
         .where(User.id != me.id)
-        .where(~pending)
+        .where(~pending_outgoing)
+        .where(~pending_incoming)
         .where(~is_friend)
     )
 
@@ -191,3 +198,72 @@ async def list_received_requests(
     received_requests = result.scalars().all()
 
     return [ReceivedRequest.model_validate(req) for req in received_requests]
+
+@router.post("/accept-request",response_model=Any,status_code=status.HTTP_200_OK)
+async def accept_request(request: GetRequest,me: User = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
+    request_id = request.id
+    # Load the friend request
+    q = select(FriendRequest).where(
+        FriendRequest.id == request_id,
+        FriendRequest.to_user_id == me.id,
+        FriendRequest.status == RequestStatus.PENDING
+    )
+    result = await db.execute(q)
+    req = result.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Pending request not found")
+
+    # Update status to ACCEPTED
+    req.status = RequestStatus.ACCEPTED
+    await db.flush()
+
+    # Insert into friendship table (both directions)
+    stmt = friendship.insert().values(
+        user_id=req.from_user_id,
+        friend_id=req.to_user_id
+    )
+    await db.execute(stmt)
+
+    stmt2 = friendship.insert().values(
+        user_id=req.to_user_id,
+        friend_id=req.from_user_id
+    )
+    await db.execute(stmt2)
+
+    await db.commit()
+    return {"detail": "Friend request accepted"}
+
+
+@router.delete(
+    "/cancel-request",
+    status_code=status.HTTP_200_OK,
+    response_model=dict
+)
+async def cancel_request(
+    request: GetRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Cancel a pending friend request. Sender can cancel a request they've sent;
+    receiver can cancel (reject) a request they've received.
+    """
+    # Fetch the pending request
+    q = select(FriendRequest).where(
+        FriendRequest.id == request.id,
+        FriendRequest.status == RequestStatus.PENDING,
+        # either from_user or to_user must match current_user
+        (FriendRequest.from_user_id == current_user.id) | (FriendRequest.to_user_id == current_user.id)
+    )
+    result = await db.execute(q)
+    req = result.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Pending request not found or already processed")
+
+    # Delete the request row
+    await db.execute(
+        delete(FriendRequest).where(FriendRequest.id == req.id)
+    )
+    await db.commit()
+
+    return {"detail": "Friend request cancelled"}

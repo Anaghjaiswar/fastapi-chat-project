@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import styles from './RequestsPanel.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { pendingRequestsList } from "../../api/pendingRequestsList"; 
 import { receivedRequestsList } from "../../api/receivedRequestsList";
+import { acceptRequest } from "../../api/acceptRequest";
+import { cancelRequest } from "../../api/cancelRequest";
+import Loader from "../loader/LoadingSpinner";
+import Button from "../button/Button";
 
 export default function RequestsPanel({ onClose }) {
-  const [activeTab, setActiveTab] = useState('sent'); // 'sent' or 'received'
+  const [activeTab, setActiveTab] = useState('sent');
   const [sentRequests, setSentRequests] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,6 +37,35 @@ export default function RequestsPanel({ onClose }) {
     load();
   }, [activeTab]);
 
+  const handleCancel = async (requestId) => {
+    const prevSentRequests = [...sentRequests];
+    const prevReceivedRequests = [...receivedRequests];
+
+    setSentRequests((prev) => prev.filter((r) => r.id !== requestId));
+    setReceivedRequests((prev) => prev.filter((r) => r.id !== requestId));
+
+    try {
+      await cancelRequest({ id: requestId });
+      
+    } catch (e) {
+      alert(e.message);
+      setSentRequests(prevSentRequests);
+      setReceivedRequests(prevReceivedRequests);
+    }
+  };
+
+  const handleAccept = async (requestId) => {
+    const prevReceivedRequests = [...receivedRequests];
+
+    setReceivedRequests((prev) => prev.filter((r) => r.id !== requestId));
+    try {
+      await acceptRequest({ id: requestId });
+    } catch (e) {
+      alert(e.message);
+      setReceivedRequests(prevReceivedRequests);
+    }
+  };
+
   const requests = activeTab === 'sent' ? sentRequests : receivedRequests;
 
   return (
@@ -40,58 +73,81 @@ export default function RequestsPanel({ onClose }) {
       <div className={styles.panel} onClick={e => e.stopPropagation()}>
         <header className={styles.header}>
           <div className={styles.tabs}>
-            <button
+            <Button
               className={activeTab === 'sent' ? styles.active : ''}
               onClick={() => setActiveTab('sent')}
             >
-              Sent 
-            </button>
-            <button
+              Sent
+            </Button>
+            <Button
               className={activeTab === 'received' ? styles.active : ''}
               onClick={() => setActiveTab('received')}
             >
-              Received 
-            </button>
+              Received
+            </Button>
           </div>
-          <button onClick={onClose} className={styles.closeBtn}>
+          <button onClick={onClose} className={styles.closeBtn} title="Close panel">
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </header>
 
-        {loading && <p>Loading...</p>}
+        {loading && (
+            <div className={styles.loadingWrapper}>
+              <Loader />
+            </div>
+          )}
         {error && <p className={styles.error}>{error}</p>}
 
-        <div className={styles.userList}>
-
-              <ul className={styles.list}>
-                {requests.length === 0 ? (
-                  <li>No {activeTab} requests</li>
-                ) : (
-                  requests.map(req => (
-                    <li key={req.id} className={styles.userprofilebox}>
-                      <div className={styles.profileimage}>
-                        <img
-                          src={req.to_user?.photo || req.from_user?.photo ||
-                              "https://res.cloudinary.com/dy1a8nyco/image/upload/v1747458258/mfc6mfijkp6rxpchpxtt.jpg"}
-                          alt="User Profile"
-                        />
-                      </div>
-                      <div className={styles.profileName}>
-                        <p>{activeTab === 'sent' ? req.to_user.full_name : req.from_user.full_name}</p>
-                        <time dateTime={req.sent_at || req.created_at} className={styles.timestamp}>
-                          {new Date(req.sent_at || req.created_at).toLocaleString()}
-                        </time>
-                      </div>
-                      {activeTab === 'sent' && (
-                        <button className={styles.cancelBtn} title="Cancel request" onClick={() => {/* cancel logic */}}>
-                          <FontAwesomeIcon icon={faXmark} />
-                        </button>
-                      )}
-                    </li>
-                  ))
+        <ul className={styles.list}>
+          {requests.length === 0 ? (
+            <li>No {activeTab} requests</li>
+          ) : (
+            requests.map(req => (
+              <li key={req.id} className={styles.userprofilebox}>
+                <div className={styles.profileimage}>
+                  <img
+                    src={req.to_user?.photo || req.from_user?.photo ||
+                        "https://res.cloudinary.com/dy1a8nyco/image/upload/v1747458258/mfc6mfijkp6rxpchpxtt.jpg"}
+                    alt="User Profile"
+                  />
+                </div>
+                <div className={styles.profileName}>
+                  <p>{activeTab === 'sent' ? req.to_user.full_name : req.from_user.full_name}</p>
+                  <time dateTime={req.sent_at || req.created_at} className={styles.timestamp}>
+                    {new Date(req.sent_at || req.created_at).toLocaleString()}
+                  </time>
+                </div>
+                {activeTab === 'sent' && (
+                  <button
+                    className={styles.cancelBtn}
+                    title="Cancel request"
+                    onClick={() => handleCancel(req.id)}
+                  >
+                    <FontAwesomeIcon icon={faXmark} />
+                  </button>
                 )}
-              </ul>
-        </div>
+                {activeTab === 'received' && (
+                  <div className={styles.actionButtons}>
+                    <button
+                      className={styles.acceptBtn}
+                      title="Accept request"
+                      onClick={() => handleAccept(req.id)}
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                    </button>
+                    <button
+                      className={styles.rejectBtn}
+                      title="Reject request"
+                      onClick={() => handleCancel(req.id)}
+                    >
+                      <FontAwesomeIcon icon={faXmark} />
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
       </div>
     </div>
   );
