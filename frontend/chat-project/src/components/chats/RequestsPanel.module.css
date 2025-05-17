@@ -1,0 +1,169 @@
+/* Overlay backdrop */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+}
+
+/* Sliding panel container */
+.panel {
+  width: 320px;
+  max-width: 100%;
+  background: #fff;
+  height: 100%;
+  padding: 1rem;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+  transform: translateX(100%);
+  animation: slideIn 0.3s forwards;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  to { transform: translateX(0); }
+}
+
+/* Header with tabs and close button */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.9vh;
+  height: 5vh;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 30vw;
+
+}
+
+.tabs button:nth-child(1) {
+  background-color: #28a745;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: black; 
+  font-family:Arial, Helvetica, sans-serif;
+  transition: background 0.2s, color 0.2s;
+  border-radius: 5vw;
+}
+
+/* Received Requests tab styling */
+.tabs button:nth-child(2) {
+  background-color: #007bff;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: black; 
+  transition: background 0.2s, color 0.2s;
+  border-radius: 5vw;
+}
+.tabs button:hover {
+  background: #f0f0f0;
+}
+
+
+
+.active {
+  border-bottom: 2px solid #007bff;
+  color: #007bff;
+  font-weight: 500;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #555;
+}
+
+.closeBtn:hover {
+  color: #000;
+}
+
+/* Error message */
+.error {
+  color: red;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+/* List styling */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  /* margin-top: 10vh; */
+}
+
+.userprofilebox {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  border-bottom: 1px solid #eee;
+  border-radius: 0.5rem;
+}
+.userprofilebox:hover{
+  background-color: #d8c0c0;
+}
+
+.profileimage img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profileimage {
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+}
+
+.profileName {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.profileName p {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #ff4d4f;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cancelBtn:hover {
+  color: #d32f2f;
+}
+
+

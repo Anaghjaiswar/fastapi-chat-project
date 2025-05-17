@@ -1,7 +1,7 @@
 .MiddlePane {
   display: flex;
   flex-direction: column;
-  width: 50vw;
+  width: 44vw;
   height: 100vh;
   background-color: #ffffff;
 }

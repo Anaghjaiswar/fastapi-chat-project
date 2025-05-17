@@ -4,14 +4,20 @@
   flex-direction: column;
   border-left: 1px solid #ccc;
   padding: 10px;
+  height: 100vh;
 }
 
 .header {
-  text-align: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content:space-between;
+  text-align: left;
   font-size: 1.2rem;
   font-weight: bold;
   margin-bottom: 15px;
   border-bottom: 1px solid #e2e8f0;
+  padding-right: 1vw;
 }
 
 .searchBox {
