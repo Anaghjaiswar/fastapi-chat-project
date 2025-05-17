@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.future import select
 from dependencies import get_current_user
-from models import FriendRequest, User
-from schemas import FriendRequestCreate, FriendRequestResponse, UserCreate, UserOut , UserUpdate, UserSummary
+from sqlalchemy import exists, and_
+from models import FriendRequest, RequestStatus, User, friendship
+from schemas import *
 from helper import hash_password, upload_file_to_cloudinary
 from database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -91,12 +92,29 @@ async def update_user(
 
 @router.get("/list",response_model=List[UserSummary], status_code=status.HTTP_200_OK)
 async def list_users(me: User = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id != me.id))
+   
+    # exclude pending requests only
+    pending = exists().where(
+        FriendRequest.from_user_id == me.id,
+        FriendRequest.to_user_id   == User.id,
+        FriendRequest.status == RequestStatus.PENDING
+    )
 
+    # exclude already‐friends
+    is_friend = exists().where(
+        friendship.c.user_id   == me.id,
+        friendship.c.friend_id == User.id
+    )
+
+    q = (
+        select(User)
+        .where(User.id != me.id)
+        .where(~pending)
+        .where(~is_friend)
+    )
+
+    result = await db.execute(q)
     users = result.scalars().all()
-    print (users)
-
-
     return users
 
 @router.post("/send-request", response_model=FriendRequestResponse, status_code=status.HTTP_201_CREATED)
@@ -134,4 +152,42 @@ async def send_request(request: FriendRequestCreate, me: User = Depends(get_curr
 
     return new_request
 
+@router.get('/pending-requests', response_model=List[PendingRequestResponse], status_code=status.HTTP_200_OK)
+async def list_pending_requests(
+    me: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[PendingRequestResponse]:
     
+    q = (
+        select(FriendRequest)
+        .options(joinedload(FriendRequest.to_user))
+        .where(
+            FriendRequest.from_user_id == me.id,
+            FriendRequest.status == RequestStatus.PENDING,
+        )
+    )
+
+    result = await db.execute(q)
+    pending_requests = result.scalars().all()
+
+    return [PendingRequestResponse.model_validate(req) for req in pending_requests]
+    
+@router.get('/received-requests', response_model=List[ReceivedRequest], status_code=status.HTTP_200_OK)
+async def list_received_requests(
+    me: User = Depends(get_current_user),       
+    db: AsyncSession = Depends(get_db)
+) -> List[ReceivedRequest]:
+    
+    q = (
+        select(FriendRequest)
+        .options(joinedload(FriendRequest.from_user))
+        .where(
+            FriendRequest.to_user_id == me.id,
+            FriendRequest.status == RequestStatus.PENDING, 
+        )
+    )
+
+    result = await db.execute(q)
+    received_requests = result.scalars().all()
+
+    return [ReceivedRequest.model_validate(req) for req in received_requests]

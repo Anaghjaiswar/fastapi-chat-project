@@ -90,8 +90,7 @@ class UserSummary(BaseModel):
     full_name: str
     photo: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 class RequestStatusEnum(str, Enum):
     PENDING = "pending"
@@ -101,6 +100,8 @@ class RequestStatusEnum(str, Enum):
 class FriendRequestCreate(BaseModel):
     to_user_id: int
 
+    class Config:
+        orm_mode = True
 
 
 class FriendRequestResponse(BaseModel):
@@ -112,3 +113,33 @@ class FriendRequestResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class PendingRequestResponse(BaseModel):
+    id: int
+    to_user: UserSummary
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,    
+        # "populate_by_name": True    
+    }
+
+class Friendship(BaseModel):
+    user_id: int
+    friend_id: int
+    since: datetime
+
+    model_config = {
+        "from_attributes": True,     # allow pulling from ORM attributes
+        "populate_by_name": True     # allow Field(alias=...) to work
+    }
+
+class ReceivedRequest(BaseModel):
+    id: int
+    from_user: UserSummary
+    received_at: datetime = Field(alias="created_at")
+
+    model_config = {
+        "from_attributes": True,
+        "populate_by_name": True,
+    }
