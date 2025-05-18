@@ -1,14 +1,16 @@
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 import jwt
+from sqlalchemy import and_
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from datetime import datetime
 from database import get_db
 from dependencies import get_current_user
-from models import Message, ChatRoom, DirectChat, User
+from models import Message, ChatRoom, DirectChat, User, room_members, friendship
 from connection_manager import manager
-from schemas import DirectChatRead, DirectChatCreate, GroupChatRead
+from schemas import DirectChatRead, DirectChatCreate, GroupChatRead, ChatRoomCreate
 from config import JWT_SECRET_KEY
 
 
@@ -29,10 +31,6 @@ async def get_current_user_ws(websocket: WebSocket, db: AsyncSession) -> User | 
     # 3) look up user
     result = await db.execute(select(User).filter(User.email == payload.get("sub")))
     return result.scalars().first()
-
-
-
-
 
 
 async def save_message(
@@ -165,5 +163,61 @@ async def create_direct_chat(data: DirectChatCreate, current_user = Depends(get_
     return chat
 
 
-# @router.post('/create-group-chat', response_model=GroupChatRead, status_code=status.HTTP_200_OK)
-# async def create_group_chat(data: )
+@router.post('/create-group', response_model=GroupChatRead, status_code=status.HTTP_201_CREATED)
+async def create_group_chat(data: ChatRoomCreate, me: User = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
+
+    # check name uniqueness first
+    q = select(ChatRoom).where(ChatRoom.name == data.name)
+    existing = (await db.execute(q)).scalar_one_or_none()
+
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,  detail="A chat room with that name already exists.")
+    
+    if data.member_ids:
+        q_valid = select(friendship.c.friend_id).where(
+            and_(
+                friendship.c.user_id == me.id,
+                friendship.c.friend_id.in_(data.member_ids)
+            )
+        )
+        result = await db.execute(q_valid)
+        valid_friends = {row[0] for row in result.fetchall()}
+        invalid = set(data.member_ids) - valid_friends
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot add non-friends as members: {sorted(invalid)}"
+            )
+
+    room = ChatRoom(
+        name=data.name,
+        description=data.description,
+        room_avatar=data.room_avatar,
+        created_by_id=me.id
+    )
+
+    db.add(room)
+    await db.flush() # get new_room.id
+
+    # insert members
+    members_to_add = set(data.member_ids)
+    members_to_add.add(me.id) # ensure creator is a member
+    stmt = room_members.insert().values([
+        {"user_id": uid, "room_id": room.id}
+        for uid in members_to_add
+    ])
+    await db.execute(stmt)
+
+    await db.commit()
+
+    q2 = (
+        select(ChatRoom)
+        .options(
+            joinedload(ChatRoom.created_by),
+            joinedload(ChatRoom.members)
+        )
+        .where(ChatRoom.id == room.id)
+    )
+    room = (await db.execute(q2)).scalar_one()
+
+    return room

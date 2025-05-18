@@ -1,6 +1,6 @@
 from datetime import date, datetime
 # from sqlalchemy import Enum
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr
 from enum import Enum
 
@@ -71,6 +71,13 @@ class DirectChatRead(BaseModel):
     class Config:
         orm_mode = True
 
+class UserSummary(BaseModel):
+    id: int
+    full_name: str
+    photo: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
 class GroupChatRead(BaseModel):
     id: int
     name: str
@@ -81,14 +88,21 @@ class GroupChatRead(BaseModel):
     class Config:
         orm_mode = True
 
-# class GroupChatCreate(BaseModel):
-#     created_by_id
-    
+class ChatRoomCreate(BaseModel):
+    name: str = Field(..., max_length=50)
+    description: Optional[str] = Field(None, max_length=1000)
+    room_avatar: Optional[str] = None
+    member_ids: List[int] = Field(..., min_length=1)
 
-class UserSummary(BaseModel):
+class ChatRoomResponse(BaseModel):
     id: int
-    full_name: str
-    photo: Optional[str] = None
+    name: str
+    description: Optional[str]
+    room_avatar: Optional[str]
+    is_active: bool
+    created_at: datetime
+    created_by: UserSummary
+    members: List[UserSummary]
 
     model_config = {"from_attributes": True}
 
