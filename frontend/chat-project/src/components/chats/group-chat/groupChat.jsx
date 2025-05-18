@@ -1,10 +1,15 @@
 import React from "react";
 import styled from "styled-components";
 
-const GroupChatButton = () => {
+const GroupChatButton = ({ onClick, className }) => {
   return (
     <StyledWrapper>
-      <div tabIndex={0} className="plusButton">
+      <div 
+      tabIndex={0} 
+      className="plusButton"
+      onClick={onClick}
+      aria-label="Create group chat"
+      >
         <svg
           className="plusIcon"
           xmlns="http://www.w3.org/2000/svg"

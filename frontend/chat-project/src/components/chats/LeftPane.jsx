@@ -5,11 +5,13 @@ import { friendsList } from "../../api/friendsList";
 import { useEffect, useState } from "react";
 import Loader from "../loader/LoadingSpinner";
 import GroupChatButton from "./group-chat/groupChat";
+import NewGroupChat from "./group-chat/NewGroupChat";
 
 export default function LeftPane() {
   const [friends, setFriends]       = useState([]);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
+  const [showNewGroup, setShowNewGroup] = useState(false);
 
   const loadFriends = async () => {
       setLoading(true);
@@ -37,7 +39,7 @@ export default function LeftPane() {
             <FontAwesomeIcon icon={faCaretDown} />
           </p>
           <div className={styles.creategroupchat}>
-            <GroupChatButton/>
+            <GroupChatButton onClick={() => setShowNewGroup(true)} />
           </div>
         </div>
         <div className={styles.chatstypes}>
@@ -74,6 +76,9 @@ export default function LeftPane() {
           </ul>
         </div>
         
+        {showNewGroup && (
+        <NewGroupChat onClose={() => setShowNewGroup(false)} />
+      )}
       </div>
     </>
   );
