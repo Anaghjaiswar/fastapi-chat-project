@@ -308,3 +308,14 @@ async def search_users(
     result = await db.execute(q)
     users = result.scalars().all()
     return users
+
+@router.get('/friends', response_model=List[UserSummary], status_code=status.HTTP_200_OK)
+async def list_friends(me: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> List[UserSummary]:
+
+    q = (
+        select(User)
+        .join(friendship, friendship.c.friend_id == User.id)
+        .where(friendship.c.user_id == me.id)
+    )
+    result = await db.execute(q)
+    return result.scalars().all()

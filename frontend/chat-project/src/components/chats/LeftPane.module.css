@@ -10,7 +10,7 @@
 }
 
 .contentBox {
-    padding: 16px;
+    padding: 0 16px 16px 16px;
     border-bottom: 1px solid #e2e8f0;
     font-size: 1.125rem;
     font-weight: 600;
@@ -50,6 +50,12 @@
     gap: 8px;
 }
 
+.loadingWrapper {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
 .userprofilebox {
     display: flex;
     align-items: center;
@@ -87,6 +93,9 @@
 .creategroupchat {
     margin-top: 10px;
     text-align: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: right;
 }
 
 @media (max-width: 768px) {
