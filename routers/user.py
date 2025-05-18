@@ -1,6 +1,6 @@
 from datetime import date
 from typing import List, Optional, Any
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.future import select
 from dependencies import get_current_user
@@ -267,3 +267,44 @@ async def cancel_request(
     await db.commit()
 
     return {"detail": "Friend request cancelled"}
+
+@router.get("/search", response_model=List[UserSummary], status_code=status.HTTP_200_OK)
+async def search_users(
+    query: Optional[str] = Query(None, description="Search term to filter users"),
+    me: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # exclude pending requests only
+    pending_outgoing = exists().where(
+        FriendRequest.from_user_id == me.id,
+        FriendRequest.to_user_id == User.id,
+        FriendRequest.status == RequestStatus.PENDING
+    )
+
+    pending_incoming = exists().where(
+        FriendRequest.to_user_id == me.id,
+        FriendRequest.from_user_id == User.id,
+        FriendRequest.status == RequestStatus.PENDING
+    )
+
+    # exclude already‐friends
+    is_friend = exists().where(
+        friendship.c.user_id == me.id,
+        friendship.c.friend_id == User.id
+    )
+
+    q = (
+        select(User)
+        .where(User.id != me.id)
+        .where(~pending_outgoing)
+        .where(~pending_incoming)
+        .where(~is_friend)
+    )
+
+    # Apply search filter if query is provided
+    if query:
+        q = q.where(User.full_name.ilike(f"%{query}%"))
+
+    result = await db.execute(q)
+    users = result.scalars().all()
+    return users
