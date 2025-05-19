@@ -1,5 +1,6 @@
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, status
 import jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload
@@ -12,6 +13,7 @@ from models import Message, ChatRoom, DirectChat, User, room_members, friendship
 from connection_manager import manager
 from schemas import DirectChatRead, DirectChatCreate, GroupChatRead, ChatRoomCreate
 from config import JWT_SECRET_KEY
+from helper import upload_file_to_cloudinary
 
 
 router = APIRouter()
@@ -163,52 +165,65 @@ async def create_direct_chat(data: DirectChatCreate, current_user = Depends(get_
     return chat
 
 
-@router.post('/create-group', response_model=GroupChatRead, status_code=status.HTTP_201_CREATED)
-async def create_group_chat(data: ChatRoomCreate, me: User = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
-
+@router.post(
+    "/create-group",
+    response_model=GroupChatRead,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_group_chat(
+    name: str = Form(..., max_length=50),
+    description: Optional[str] = Form(None, max_length=1000),
+    member_ids: List[int] = Form(...),
+    room_avatar: UploadFile = File(None),
+    me: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     # check name uniqueness first
-    q = select(ChatRoom).where(ChatRoom.name == data.name)
-    existing = (await db.execute(q)).scalar_one_or_none()
-
+    existing = (await db.execute(
+        select(ChatRoom).where(ChatRoom.name == name)
+    )).scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,  detail="A chat room with that name already exists.")
+        raise HTTPException(400, "A chat room with that name already exists.")
     
-    if data.member_ids:
+    avatar_url: Optional[str] = None
+    if room_avatar:
+        contents = await room_avatar.read()
+        avatar_url = upload_file_to_cloudinary(contents, folder="group_chat_avatars")
+
+    if member_ids:
         q_valid = select(friendship.c.friend_id).where(
             and_(
                 friendship.c.user_id == me.id,
-                friendship.c.friend_id.in_(data.member_ids)
+                friendship.c.friend_id.in_(member_ids)
             )
         )
         result = await db.execute(q_valid)
         valid_friends = {row[0] for row in result.fetchall()}
-        invalid = set(data.member_ids) - valid_friends
+        invalid = set(member_ids) - valid_friends
         if invalid:
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot add non-friends as members: {sorted(invalid)}"
             )
 
-    room = ChatRoom(
-        name=data.name,
-        description=data.description,
-        room_avatar=data.room_avatar,
-        created_by_id=me.id
+    new_room = ChatRoom(
+        name=name,
+        description=description,
+        room_avatar=avatar_url,
+        created_by_id=me.id,
     )
+    db.add(new_room)
+    await db.flush()
 
-    db.add(room)
-    await db.flush() # get new_room.id
 
     # insert members
-    members_to_add = set(data.member_ids)
-    members_to_add.add(me.id) # ensure creator is a member
-    stmt = room_members.insert().values([
-        {"user_id": uid, "room_id": room.id}
-        for uid in members_to_add
-    ])
-    await db.execute(stmt)
-
+    members = set(member_ids)
+    members.add(me.id)
+    await db.execute(room_members.insert().values([
+        {"user_id": uid, "room_id": new_room.id} for uid in members
+    ]))
     await db.commit()
+
 
     q2 = (
         select(ChatRoom)
@@ -216,8 +231,10 @@ async def create_group_chat(data: ChatRoomCreate, me: User = Depends(get_current
             joinedload(ChatRoom.created_by),
             joinedload(ChatRoom.members)
         )
-        .where(ChatRoom.id == room.id)
+        .where(ChatRoom.id == new_room.id)
     )
-    room = (await db.execute(q2)).scalar_one()
+
+    result = await db.execute(q2)
+    room = result.unique().scalar_one()
 
     return room

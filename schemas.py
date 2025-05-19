@@ -106,6 +106,14 @@ class ChatRoomResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
+class ChatRoomSummary(BaseModel):
+    id: int
+    name: str
+    room_avatar: Optional[str]
+
+    model_config = {"from_attributes": True}
+
 class RequestStatusEnum(str, Enum):
     PENDING = "pending"
     ACCEPTED = "accepted"

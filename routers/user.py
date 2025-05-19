@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.future import select
 from dependencies import get_current_user
 from sqlalchemy import delete, exists, and_
-from models import FriendRequest, RequestStatus, User, friendship
+from models import ChatRoom, FriendRequest, RequestStatus, User, friendship, room_members
 from schemas import *
 from helper import hash_password, upload_file_to_cloudinary
 from database import get_db
@@ -316,6 +316,23 @@ async def list_friends(me: User = Depends(get_current_user), db: AsyncSession = 
         select(User)
         .join(friendship, friendship.c.friend_id == User.id)
         .where(friendship.c.user_id == me.id)
+    )
+    result = await db.execute(q)
+    return result.scalars().all()
+
+
+@router.get("/joined-rooms",response_model=List[ChatRoomSummary],status_code=status.HTTP_200_OK)
+async def list_joined_rooms(
+    me: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[ChatRoomSummary]:
+    """
+    Return all group chat rooms the user is a member of.
+    """
+    q = (
+        select(ChatRoom)
+        .join(room_members, room_members.c.room_id == ChatRoom.id)
+        .where(room_members.c.user_id == me.id)
     )
     result = await db.execute(q)
     return result.scalars().all()
