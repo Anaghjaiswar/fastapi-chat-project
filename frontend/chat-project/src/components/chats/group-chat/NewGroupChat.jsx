@@ -3,6 +3,7 @@ import { createGroupChat } from "../../../api/createGroupChat";
 import styles from "./NewGroupChat.module.css";
 import List from "./list";
 import Next from "./Next";
+import DetailsForm from "./GroupDetailsform";
 
 export default function NewGroupChat({ onClose }) {
   const [step, setStep] = useState(1);
@@ -58,7 +59,7 @@ export default function NewGroupChat({ onClose }) {
           />
         )}
         {step === 2 && (
-          <Next
+          <DetailsForm
             details={details}
             onChange={handleDetailsChange}
             onBack={() => setStep(1)}

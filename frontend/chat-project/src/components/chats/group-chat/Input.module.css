@@ -1,0 +1,60 @@
+.formGroup {
+  position: relative;
+  padding: 20px 0 0;
+  width: 100%;
+}
+
+.formField {
+  font-family: inherit;
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid #9b9b9b;
+  outline: 0;
+  font-size: 14px;
+  color: #070707;
+  padding: 7px 0;
+  background: transparent;
+  transition: border-color 0.2s;
+  resize: vertical; /* allow textarea resize */
+}
+
+.formField::placeholder {
+  color: transparent;
+}
+
+.formField:placeholder-shown ~ .formLabel {
+  font-size: 17px;
+  cursor: text;
+  top: 20px;
+}
+
+.formLabel {
+  position: absolute;
+  top: 0;
+  display: block;
+  transition: 0.2s;
+  font-size: 17px;
+  color: #9b9b9b;
+  pointer-events: none;
+}
+
+.formField:focus {
+  padding-bottom: 6px;
+  font-weight: 700;
+  border-width: 3px;
+  border-image: linear-gradient(to right, #116399, #38caef);
+  border-image-slice: 1;
+}
+
+.formField:focus ~ .formLabel {
+  top: 0;
+  font-size: 17px;
+  color: #38caef;
+  font-weight: 700;
+}
+
+/* Reset defaults */
+.formField:required,
+.formField:invalid {
+  box-shadow: none;
+}

@@ -1,0 +1,68 @@
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.error {
+  color: red;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.field {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.textarea {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.preview {
+  margin-top: 0.5rem;
+}
+
+.preview img {
+  max-width: 100px;
+  max-height: 100px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.submit {
+  width: 15vw;
+  padding: 1vw;
+  border-radius: 5vw;
+  cursor: pointer;
+}
+
+
+.submit:disabled {
+  background: #a5d6a7;
+  cursor: not-allowed;
+}
