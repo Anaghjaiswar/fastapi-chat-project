@@ -19,27 +19,57 @@
     justify-content: space-between;
     align-items: center;
 }
+/* LeftPane.module.css */
 
+/* Container for the three tabs */
 .chatstypes {
-    display: flex;
-    justify-content: space-around;
-    padding: 8px 0;
-    border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.allChats, .personalChats, .groupChats {
-    flex: 1;
-    text-align: center;
-    padding: 8px 0;
-    cursor: pointer;
-    font-size: 0.875rem;
-    color: #4a5568;
-    transition: background 0.3s ease;
+/* Base styles for all three */
+.personalChats,
+.groupChats {
+  padding: 8px 12px;
+  border: 1px solid #333;
+  border-radius: 24px;
+  min-width: 6vw;
+  text-align: center;
+  user-select: none;
+  transition:
+    background-color 0.2s,
+    transform 0.1s,
+    box-shadow 0.1s;
 }
 
-.allChats:hover, .personalChats:hover, .groupChats:hover {
-    background-color: #edf2f7;
+/* Individual background colors */
+.personalChats { background-color: #00ffff; /* aqua */ }
+.groupChats    { background-color: #7fff00; /* chartreuse */ }
+
+/* Active state (selected) */
+.personalChatsActive,
+.groupChatsActive {
+  box-shadow: inset 0 0 0 2px #111;
+  color: #111;
+  font-weight: bold;
 }
+
+/* Hover gives a slight lift */
+.personalChats:hover,
+.groupChats:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+/* Pressed state */
+.personalChats:active,
+.groupChats:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
 
 .chatprofiles {
     flex: 1;
