@@ -6,9 +6,13 @@ from typing import Any, Dict, List
 import jwt
 from passlib.context import CryptContext
 from fastapi_mail import MessageSchema
+from sqlalchemy import select
 from config import *
 import time
-from fastapi import UploadFile, File, Form
+from fastapi import HTTPException, UploadFile, File, Form,status
+from sqlalchemy.ext.asyncio import AsyncSession
+from models import Message
+
 
 # 
 # ~~~~~~password hashing Functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -137,3 +141,57 @@ def upload_file_to_cloudinary(file, folder: str = None) -> str:
     except Exception as e:
         raise RuntimeError(f"Failed to upload file to Cloudinary: {str(e)}")
 
+# 
+# ~~~~~~Chat Helper Functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+async def update_message_reaction(
+    db: AsyncSession,
+    message_id: int,
+    user_id: int,
+    emoji: str
+):
+    result = await db.execute(select(Message).filter(Message.id == message_id))
+    msg = result.scalars().first()
+    if not msg:
+        return
+    reactions = msg.reactions or {}
+    users = set(reactions.get(emoji, []))
+    if user_id in users:
+        users.remove(user_id)
+    else:
+        users.add(user_id)
+    reactions[emoji] = list(users)
+    msg.reactions = reactions
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+
+async def edit_message(
+    db: AsyncSession,
+    message_id: int,
+    user_id: int,
+    new_content: str
+):
+    result = await db.execute(select(Message).filter(Message.id == message_id))
+    msg = result.scalars().first()
+    if not msg or msg.sender_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot edit this message")
+    msg.content = new_content
+    msg.is_edited = True
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+    return msg
+
+async def delete_message(
+    db: AsyncSession,
+    message_id: int,
+    user_id: int
+):
+    result = await db.execute(select(Message).filter(Message.id == message_id))
+    msg = result.scalars().first()
+    if not msg or msg.sender_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this message")
+    msg.is_deleted = True
+    db.add(msg)
+    await db.commit()

@@ -13,7 +13,7 @@ from models import Message, ChatRoom, DirectChat, User, room_members, friendship
 from connection_manager import manager
 from schemas import DirectChatRead, DirectChatCreate, GroupChatRead, ChatRoomCreate
 from config import JWT_SECRET_KEY
-from helper import upload_file_to_cloudinary
+from helper import upload_file_to_cloudinary, update_message_reaction, edit_message, delete_message
 
 
 router = APIRouter()
@@ -105,10 +105,9 @@ async def ws_direct(
     if not user:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
-    
-    
+
     # authorize: ensure user is part of this direct chat
-    result = await db.execute(select(DirectChat).filter(DirectChat.id==chat_id))
+    result = await db.execute(select(DirectChat).filter(DirectChat.id == chat_id))
     chat = result.scalars().first()
     if not chat or user.id not in (chat.user_a_id, chat.user_b_id):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -116,18 +115,79 @@ async def ws_direct(
 
     await manager.connect(websocket, "direct", chat_id)
     asyncio.create_task(manager.listen_to_redis("direct", chat_id))
+
     try:
         while True:
             data = await websocket.receive_json()
+            action = data.get("action", "message")
+
+            if action == "typing":
+                await manager.broadcast("direct", chat_id, {
+                    "action": "typing",
+                    "user_id": user.id,
+                })
+                continue
+
+            if action == "reaction":
+                msg_id = data["message_id"]
+                emoji = data["emoji"]
+                await update_message_reaction(db, msg_id, user.id, emoji)
+                await manager.broadcast("direct", chat_id, {
+                    "action": "reaction",
+                    "message_id": msg_id,
+                    "user_id": user.id,
+                    "emoji": emoji,
+                })
+                continue
+
+            if action == "edit":
+                msg_id = data["message_id"]
+                new_content = data.get("content")
+                msg = await edit_message(db, msg_id, user.id, new_content)
+                await manager.broadcast("direct", chat_id, {
+                    "action": "edit",
+                    "message_id": msg.id,
+                    "content": msg.content,
+                    "edited": True,
+                })
+                continue
+
+            if action == "delete":
+                msg_id = data["message_id"]
+                await delete_message(db, msg_id, user.id)
+                await manager.broadcast("direct", chat_id, {
+                    "action": "delete",
+                    "message_id": msg_id,
+                })
+                continue
+
+            if action == "reply":
+                parent_id = data["parent_id"]
+                content = data.get("content")
+                msg = await save_message(
+                    db, user.id, content, "direct", chat_id, data.get("type", "text"), parent_message_id=parent_id
+                )
+                await manager.broadcast("direct", chat_id, {
+                    "action": "reply",
+                    "id": msg.id,
+                    "parent_id": parent_id,
+                    "sender_id": user.id,
+                    "content": msg.content,
+                    "timestamp": msg.created_at.isoformat(),
+                })
+                continue
+
+            # default: regular message
             msg = await save_message(
-                db, user.id, data["content"], "direct", chat_id, data.get("type","text")
+                db, user.id, data["content"], "direct", chat_id, data.get("type", "text")
             )
             await manager.broadcast("direct", chat_id, {
+                "action": "message",
                 "id": msg.id,
                 "direct_chat_id": chat_id,
                 "sender_id": user.id,
                 "content": msg.content,
-                "timestamp": msg.created_at.isoformat()
+                "timestamp": msg.created_at.isoformat(),
             })
     except WebSocketDisconnect:
         manager.disconnect(websocket, "direct", chat_id)
