@@ -13,43 +13,155 @@ import "react-chat-elements/dist/main.css";
 export default function MiddlePane({
   chatId,
   friend,
-  messages = [],
+  messages: initialMessages = [],
   onNewMessage,
   currentUserId,
 }) {
   const wsRef = useRef();
   const [text, setText] = useState("");
+  const [messages, setMessages] = useState(initialMessages);
+  const [typingUsers, setTypingUsers] = useState({});
 
-  useEffect(() => {
+  // helper to toggle a user in an emoji list
+  const updateEmojiList = (prev = [], userId) => {
+    const set = new Set(prev);
+    if (set.has(userId)) set.delete(userId);
+    else set.add(userId);
+    return Array.from(set);
+  };
+
+  // send arbitrary WS action
+  const sendAction = (payload) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(payload));
+    }
+  };
+
+  // typing indicator
+  let typingTimeout;
+  const startTyping = () => {
+    sendAction({ action: "typing" });
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      /* optionally send stop_typing */
+    }, 1000);
+  };
+
+  // reaction, edit, delete, reply all just wrap sendAction:
+  const toggleReaction = (messageId, emoji) =>
+    sendAction({ action: "reaction", message_id: messageId, emoji });
+  const submitEdit    = (messageId, content) =>
+    sendAction({ action: "edit",    message_id: messageId, content });
+  const submitDelete  = (messageId) =>
+    sendAction({ action: "delete", message_id: messageId });
+  const submitReply   = (parentId, content) =>
+    sendAction({ action: "reply",  parent_id: parentId, content });
+
+
+
+
+   useEffect(() => {
     if (!chatId) return;
     const ws = new WebSocket(`ws://localhost:8000/chat/ws/direct/${chatId}`);
     wsRef.current = ws;
 
     ws.onmessage = (evt) => {
       const msg = JSON.parse(evt.data);
-      onNewMessage({
-        id: msg.id,
-        position: msg.sender_id === currentUserId ? "right" : "left",
-        type: "text",
-        text: msg.content,
-        title: msg.sender_id === currentUserId ? "You" : friend.full_name,
-        date: new Date(msg.timestamp),
-      });
+
+      switch (msg.action) {
+        case "typing":
+          setTypingUsers((t) => ({ ...t, [msg.user_id]: true }));
+          setTimeout(
+            () => setTypingUsers((t) => ({ ...t, [msg.user_id]: false })),
+            2000
+          );
+          break;
+
+        case "reaction":
+          setMessages((msgs) =>
+            msgs.map((m) =>
+              m.id === msg.message_id
+                ? {
+                    ...m,
+                    reactions: {
+                      ...m.reactions,
+                      [msg.emoji]: updateEmojiList(
+                        m.reactions?.[msg.emoji],
+                        msg.user_id
+                      ),
+                    },
+                  }
+                : m
+            )
+          );
+          break;
+
+        case "edit":
+          setMessages((msgs) =>
+            msgs.map((m) =>
+              m.id === msg.message_id
+                ? { ...m, text: msg.content, edited: true }
+                : m
+            )
+          );
+          break;
+
+        case "delete":
+          setMessages((msgs) =>
+            msgs.map((m) =>
+              m.id === msg.message_id
+                ? { ...m, text: "This message was deleted", deleted: true }
+                : m
+            )
+          );
+          break;
+
+        case "reply":
+          setMessages((msgs) => [
+            ...msgs,
+            {
+              id: msg.id,
+              parent_id: msg.parent_id,
+              position:
+                msg.sender_id === currentUserId ? "right" : "left",
+              type: "text",
+              text: msg.content,
+              title:
+                msg.sender_id === currentUserId ? "You" : friend.full_name,
+              date: new Date(msg.timestamp),
+            },
+          ]);
+          break;
+
+        case "message":
+        default:
+          // append and also bubble up if the parent wants it
+          const newMsg = {
+            id: msg.id,
+            position:
+              msg.sender_id === currentUserId ? "right" : "left",
+            type: "text",
+            text: msg.content,
+            title:
+              msg.sender_id === currentUserId ? "You" : friend.full_name,
+            date: new Date(msg.timestamp),
+          };
+          setMessages((msgs) => [...msgs, newMsg]);
+          onNewMessage?.(newMsg);
+          break;
+      }
     };
 
-    ws.onclose = () => {
+    ws.onclose = () =>
       console.log("WebSocket closed for chatId", chatId);
-    };
 
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
   }, [chatId, friend, onNewMessage, currentUserId]);
 
   const sendMessage = () => {
     const trimmed = text.trim();
-    if (!trimmed || !wsRef.current) return;
-    wsRef.current.send(JSON.stringify({ content: trimmed }));
+    if (!trimmed) return;
+    sendAction({ content: trimmed });
     setText("");
   };
 
@@ -88,10 +200,23 @@ export default function MiddlePane({
         </div>
       </div>
 
+      {/* Typing indicator */}
+      {Object.keys(typingUsers).some((id) => typingUsers[id]) && (
+        <div className={styles.typingIndicator}>
+          {friend.full_name} is typing…
+        </div>
+      )}
+
       {/* Messages Box */}
       <div className={styles.chatsMessagesBox}>
         {messages.map((m) => (
-          <MessageBox key={m.id} {...m} />
+          <MessageBox
+            key={m.id}
+            {...m}
+            onStringClick={() => toggleReaction(m.id, "👍")}
+            onLongPress={() => submitDelete(m.id)}
+            // you can wire up edit & reply similarly
+          />
         ))}
       </div>
 
@@ -106,7 +231,10 @@ export default function MiddlePane({
             placeholder="Type a message..."
             multiline={false}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              startTyping();
+            }}
             rightButtons={<Button text="Send" onClick={sendMessage} />}
           />
         </div>
