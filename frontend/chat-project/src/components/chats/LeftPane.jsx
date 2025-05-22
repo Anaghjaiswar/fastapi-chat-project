@@ -25,6 +25,7 @@ export default function LeftPane({ onSelectChat, onSelectRoom }) {
     try {
       const [fData, rData] = await Promise.all([
         friendsList(),
+        
         joinedRoomsList(),
       ]);
       setFriends(fData);
@@ -40,9 +41,12 @@ export default function LeftPane({ onSelectChat, onSelectRoom }) {
     loadData();
   }, []);
 
-  const handleSelectChat = (friendId) => {
-    onSelectChat?.(friendId);
-  };
+    const handleSelectChat = (friendId) => {
+      const friend = friends.find(f => f.id === friendId);
+      if (!friend) return;
+      onSelectChat(friend);
+    };
+
 
   const handleSelectRoom = (roomId) => {
     onSelectRoom?.(roomId);

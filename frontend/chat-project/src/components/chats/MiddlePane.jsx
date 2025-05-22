@@ -1,22 +1,58 @@
-import React, { useContext } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faVideo,
   faPhone,
   faMagnifyingGlass,
   faFileArrowUp,
-  faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MiddlePane.module.css";
+import { MessageBox, Input, Button } from "react-chat-elements";
+import "react-chat-elements/dist/main.css";
 
-// Dummy messages for demonstration
-const dummyMessages = [
-  {id: 1, sender: "Alice", name: "Alice Smith", avatar: "https://i.pravatar.cc/40?img=5", text: "Hey there!", time: "10:00 AM"},
-  {id: 2, sender: "me", name: "You", avatar: "https://i.pravatar.cc/40?img=3", text: "Hi Alice, how are you?", time: "10:02 AM"},
-  {id: 3, sender: "Alice", name: "Alice Smith",avatar: "https://i.pravatar.cc/40?img=5",text: "Doing well, thanks!",time: "10:05 AM"}
-];
+export default function MiddlePane({
+  chatId,
+  friend,
+  messages = [],
+  onNewMessage,
+  currentUserId,
+}) {
+  const wsRef = useRef();
+  const [text, setText] = useState("");
 
-export default function MiddlePane() {
+  useEffect(() => {
+    if (!chatId) return;
+    const ws = new WebSocket(`ws://localhost:8000/chat/ws/direct/${chatId}`);
+    wsRef.current = ws;
+
+    ws.onmessage = (evt) => {
+      const msg = JSON.parse(evt.data);
+      onNewMessage({
+        id: msg.id,
+        position: msg.sender_id === currentUserId ? "right" : "left",
+        type: "text",
+        text: msg.content,
+        title: msg.sender_id === currentUserId ? "You" : friend.full_name,
+        date: new Date(msg.timestamp),
+      });
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket closed for chatId", chatId);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [chatId, friend, onNewMessage, currentUserId]);
+
+  const sendMessage = () => {
+    const trimmed = text.trim();
+    if (!trimmed || !wsRef.current) return;
+    wsRef.current.send(JSON.stringify({ content: trimmed }));
+    setText("");
+  };
+
   return (
     <div className={styles.MiddlePane}>
       {/* Header */}
@@ -24,13 +60,13 @@ export default function MiddlePane() {
         <div className={styles.userbox}>
           <div className={styles.userImage}>
             <img
-              src="https://res.cloudinary.com/dy1a8nyco/image/upload/v1746898770/yqjvhibgc2fpzrgplexm.jpg"
-              alt="User"
+              src={friend.photo || "https://i.pravatar.cc/40"}
+              alt={friend.full_name}
             />
           </div>
           <div className={styles.name_status}>
             <div className={styles.name}>
-              <p>Anagh Jaiswar</p>
+              <p>{friend.full_name}</p>
             </div>
             <div className={styles.status}>
               <p>Online</p>
@@ -54,62 +90,25 @@ export default function MiddlePane() {
 
       {/* Messages Box */}
       <div className={styles.chatsMessagesBox}>
-        {dummyMessages.map((msg) => {
-          const isMe = msg.sender === "me";
-          return (
-            <div
-              key={msg.id}
-              className={`${styles.messageRow} ${
-                isMe ? styles.myMessageRow : styles.theirMessageRow
-              }`}
-            >
-              {/* Avatar */}
-              <img
-                src={msg.avatar}
-                alt={msg.name}
-                className={styles.messageAvatar}
-              />
-
-              <div className={styles.messageContent}>
-                {/* Name */}
-                <div className={styles.messageName}>{msg.name}</div>
-
-                {/* Bubble */}
-                <div
-                  className={
-                    isMe ? styles.myMessageBubble : styles.theirMessageBubble
-                  }
-                >
-                  <p>{msg.text}</p>
-                </div>
-
-                {/* Timestamp */}
-                <span className={styles.timestamp}>{msg.time}</span>
-              </div>
-            </div>
-          );
-        })}
+        {messages.map((m) => (
+          <MessageBox key={m.id} {...m} />
+        ))}
       </div>
 
       {/* Footer */}
       <div className={styles.footer}>
-        <label
-          htmlFor="file-upload"
-          className={styles.fileupload}
-          aria-label="Attach file"
-        >
+        <label htmlFor="file-upload" className={styles.fileupload} aria-label="Attach file">
           <input id="file-upload" type="file" hidden />
           <FontAwesomeIcon icon={faFileArrowUp} />
         </label>
         <div className={styles.msginput}>
-          <input
-            type="text"
+          <Input
             placeholder="Type a message..."
-            aria-label="Type a message"
+            multiline={false}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rightButtons={<Button text="Send" onClick={sendMessage} />}
           />
-          <button type="submit" aria-label="Send message">
-            <FontAwesomeIcon icon={faPaperPlane} />
-          </button>
         </div>
       </div>
     </div>

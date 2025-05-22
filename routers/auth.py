@@ -38,7 +38,10 @@ async def login_user(
     response.set_cookie("access_token", access_token, httponly=True, secure=False, samesite="lax", max_age=15*60, path="/")
     response.set_cookie("refresh_token", refresh_token, httponly=True, secure=False, samesite="lax", max_age=7*24*3600, path="/")
 
-    return {"message": "Login successful"}
+    return {
+        "message": "Login successful",
+        "user_id": user.id
+    }
 
 
 @router.post("/token/refresh", status_code=status.HTTP_200_OK)

@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, status
 import jwt
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -145,12 +145,35 @@ async def create_direct_chat(data: DirectChatCreate, current_user = Depends(get_
     if not second_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="second user not found")
     
-     # see if chat already exists (either ordering)
+    friend_check = await db.execute(
+        select(friendship)
+        .where(
+            and_(
+                friendship.c.user_id == current_user.id,
+                friendship.c.friend_id == data.other_user_id
+            )
+        )
+    )
+    if not friend_check.first():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Can only start a chat with a friend"
+        )
+    
+    
+    # see if chat already exists (either ordering)
     q = await db.execute(
         select(DirectChat).filter(
-            (DirectChat.user_a_id == current_user.id) & (DirectChat.user_b_id == data.other_user_id)
-            |
-            (DirectChat.user_a_id == data.other_user_id) & (DirectChat.user_b_id == current_user.id)
+            or_(
+                and_(
+                    DirectChat.user_a_id == current_user.id,
+                    DirectChat.user_b_id == data.other_user_id
+                ),
+                and_(
+                    DirectChat.user_a_id == data.other_user_id,
+                    DirectChat.user_b_id == current_user.id
+                )
+            )
         )
     )
     existing = q.scalars().first()

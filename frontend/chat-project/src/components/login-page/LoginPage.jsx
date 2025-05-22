@@ -39,7 +39,9 @@ export default function Login() {
     
     setLoading(true)
     try{
-        await loginUser({ email: form.email, password: form.password });
+        const { user_id } = await loginUser({ email: form.email, password: form.password });
+        localStorage.setItem("userId", user_id);
+
         navigate('/chat');
     } catch (err) {
       setGeneralError(err.message);

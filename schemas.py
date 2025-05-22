@@ -83,8 +83,8 @@ class GroupChatRead(BaseModel):
     name: str
     description: str
     is_active: bool
-    room_avatar: str
-
+    room_avatar: Optional[str] = None
+    
     class Config:
         orm_mode = True
 
