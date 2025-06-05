@@ -1,6 +1,5 @@
 from cloudinary.uploader import upload
 from datetime import datetime, timedelta
-import random
 import secrets
 from typing import Any, Dict, List
 import jwt

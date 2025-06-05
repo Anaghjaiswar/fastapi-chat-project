@@ -1,14 +1,21 @@
-import React, { useRef, useEffect, useState } from "react";
+// MiddlePane.jsx
+import React, { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faVideo,
   faPhone,
   faMagnifyingGlass,
   faFileArrowUp,
+  faPaperPlane,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import styles from "./MiddlePane.module.css";
 import { MessageBox, Input, Button } from "react-chat-elements";
 import "react-chat-elements/dist/main.css";
+import useDebouncedCallback from "../../hooks/useDebouncedCallback";
+import MessageOptions from "./MessageOptions";
+import { fetchOldMessagesDirect } from "../../api/fetchOldMessagesDirect";
+import Loader from "../loader/LoadingSpinner";
 
 export default function MiddlePane({
   chatId,
@@ -17,12 +24,97 @@ export default function MiddlePane({
   onNewMessage,
   currentUserId,
 }) {
-  const wsRef = useRef();
-  const [text, setText] = useState("");
-  const [messages, setMessages] = useState(initialMessages);
-  const [typingUsers, setTypingUsers] = useState({});
+  const chatBoxRef = useRef();
+  const wsRef = useRef(); // <-- Add this line
 
-  // helper to toggle a user in an emoji list
+  const [messages, setMessages] = useState([]);
+  const [loadingOldMessages, setLoadingOldMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [typingUsers, setTypingUsers] = useState({});
+  const [text, setText] = useState("");
+  const [editingId, setEditingId] = useState(null); // <-- Add this line
+  const [editText, setEditText] = useState("");     // <-- Add this line
+  const [optionsFor, setOptionsFor] = useState(null); // <-- Add this line
+  const [hoveredMsgId, setHoveredMsgId] = useState(null); // <-- Add this line
+
+  // Helper to map backend message to frontend shape
+  const mapBackendMessage = (msg) => ({
+    id: msg.id,
+    position: msg.sender_id === currentUserId ? "right" : "left",
+    type: msg.type || "text",
+    text: msg.content,
+    title: msg.sender_id === currentUserId ? "You" : friend.full_name,
+    date: new Date(msg.timestamp),
+    status: "delivered",
+    reactions: {},
+    _temp: false,
+  });
+
+  // Initial load: fetch last N messages
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingOldMessages(true);
+    fetchOldMessagesDirect(chatId, 20, 0)
+      .then((msgs) => {
+        if (!isMounted) return;
+        const mapped = msgs.map(mapBackendMessage);
+        setMessages(mapped);
+        setOffset(mapped.length);
+        setHasMoreMessages(msgs.length === 20);
+        // Scroll to bottom after initial load
+        setTimeout(() => {
+          if (chatBoxRef.current) {
+            chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+          }
+        }, 0);
+      })
+      .finally(() => setLoadingOldMessages(false));
+    return () => { isMounted = false; };
+    // eslint-disable-next-line
+  }, [chatId]);
+
+  // Load older messages when scrolled to top
+  const loadOldMessages = async () => {
+    if (loadingOldMessages || !hasMoreMessages) return;
+    setLoadingOldMessages(true);
+    try {
+      const oldMessagesRaw = await fetchOldMessagesDirect(chatId, 20, offset);
+      const oldMessages = oldMessagesRaw.map(mapBackendMessage);
+      setMessages((prev) => {
+        // Deduplicate by id
+        const ids = new Set(prev.map((m) => m.id));
+        return [...oldMessages.filter((m) => !ids.has(m.id)), ...prev];
+      });
+      setOffset((prev) => prev + oldMessages.length);
+      if (oldMessages.length < 20) setHasMoreMessages(false);
+    } catch (e) {
+      // Optionally handle error
+    } finally {
+      setLoadingOldMessages(false);
+    }
+  };
+
+  // Scroll handler to detect top scroll
+  const handleScroll = () => {
+    if (chatBoxRef.current && chatBoxRef.current.scrollTop === 0) {
+      loadOldMessages();
+    }
+  };
+
+  // Attach scroll listener
+  useEffect(() => {
+    const chatBox = chatBoxRef.current;
+    if (chatBox) {
+      chatBox.addEventListener("scroll", handleScroll);
+    }
+    return () => {
+      if (chatBox) chatBox.removeEventListener("scroll", handleScroll);
+    };
+    // eslint-disable-next-line
+  }, [chatBoxRef.current, loadingOldMessages, hasMoreMessages, offset]);
+
+  // Toggle user presence in reaction emoji list
   const updateEmojiList = (prev = [], userId) => {
     const set = new Set(prev);
     if (set.has(userId)) set.delete(userId);
@@ -30,38 +122,54 @@ export default function MiddlePane({
     return Array.from(set);
   };
 
-  // send arbitrary WS action
+  // Render reactions string for message footer
+  const renderReactions = (reactions) => {
+    if (!reactions) return "";
+    return Object.entries(reactions)
+      .map(([emoji, userIds]) => (Array.isArray(userIds) && userIds.length > 0 ? `${emoji} × ${userIds.length}` : ""))
+      .filter(Boolean)
+      .join("  ");
+  };
+
+  // Options menu handlers
+  const openOptionsForMessage = (id) => setOptionsFor(id);
+  const closeOptions = () => setOptionsFor(null);
+
+  // Edit message handlers
+  const startEditing = (id, originalText) => {
+    setEditingId(id);
+    setEditText(originalText);
+    closeOptions();
+  };
+  const submitEditHandler = () => {
+    if (editText.trim()) {
+      sendAction({ action: "edit", message_id: editingId, content: editText.trim() });
+    }
+    setEditingId(null);
+    setEditText("");
+  };
+
+  // WebSocket send helper
   const sendAction = (payload) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(payload));
     }
   };
 
-  // typing indicator
-  let typingTimeout;
-  const startTyping = () => {
+  // Debounced typing indicator
+  const debouncedTyping = useDebouncedCallback(() => {
     sendAction({ action: "typing" });
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      /* optionally send stop_typing */
-    }, 1000);
-  };
+  }, 500);
 
-  // reaction, edit, delete, reply all just wrap sendAction:
-  const toggleReaction = (messageId, emoji) =>
-    sendAction({ action: "reaction", message_id: messageId, emoji });
-  const submitEdit    = (messageId, content) =>
-    sendAction({ action: "edit",    message_id: messageId, content });
-  const submitDelete  = (messageId) =>
-    sendAction({ action: "delete", message_id: messageId });
-  const submitReply   = (parentId, content) =>
-    sendAction({ action: "reply",  parent_id: parentId, content });
+  // Reactions, delete, reply wrappers
+  const toggleReaction = (messageId, emoji) => sendAction({ action: "reaction", message_id: messageId, emoji });
+  const submitDelete = (messageId) => sendAction({ action: "delete", message_id: messageId });
+  const submitReply = (parentId) => sendAction({ action: "reply", parent_id: parentId, content: "" });
 
-
-
-
-   useEffect(() => {
+  // WebSocket setup + message handling
+  useEffect(() => {
     if (!chatId) return;
+
     const ws = new WebSocket(`ws://localhost:8000/chat/ws/direct/${chatId}`);
     wsRef.current = ws;
 
@@ -70,11 +178,10 @@ export default function MiddlePane({
 
       switch (msg.action) {
         case "typing":
-          setTypingUsers((t) => ({ ...t, [msg.user_id]: true }));
-          setTimeout(
-            () => setTypingUsers((t) => ({ ...t, [msg.user_id]: false })),
-            2000
-          );
+          if (msg.user_id !== currentUserId) {
+            setTypingUsers((t) => ({ ...t, [msg.user_id]: true }));
+            setTimeout(() => setTypingUsers((t) => ({ ...t, [msg.user_id]: false })), 2000);
+          }
           break;
 
         case "reaction":
@@ -85,10 +192,7 @@ export default function MiddlePane({
                     ...m,
                     reactions: {
                       ...m.reactions,
-                      [msg.emoji]: updateEmojiList(
-                        m.reactions?.[msg.emoji],
-                        msg.user_id
-                      ),
+                      [msg.emoji]: updateEmojiList(m.reactions?.[msg.emoji] || [], msg.user_id),
                     },
                   }
                 : m
@@ -98,20 +202,14 @@ export default function MiddlePane({
 
         case "edit":
           setMessages((msgs) =>
-            msgs.map((m) =>
-              m.id === msg.message_id
-                ? { ...m, text: msg.content, edited: true }
-                : m
-            )
+            msgs.map((m) => (m.id === msg.message_id ? { ...m, text: msg.content, edited: true } : m))
           );
           break;
 
         case "delete":
           setMessages((msgs) =>
             msgs.map((m) =>
-              m.id === msg.message_id
-                ? { ...m, text: "This message was deleted", deleted: true }
-                : m
+              m.id === msg.message_id ? { ...m, text: "This message was deleted", deleted: true } : m
             )
           );
           break;
@@ -122,45 +220,96 @@ export default function MiddlePane({
             {
               id: msg.id,
               parent_id: msg.parent_id,
-              position:
-                msg.sender_id === currentUserId ? "right" : "left",
+              position: msg.sender_id === currentUserId ? "right" : "left",
               type: "text",
               text: msg.content,
-              title:
-                msg.sender_id === currentUserId ? "You" : friend.full_name,
+              title: msg.sender_id === currentUserId ? "You" : friend.full_name,
               date: new Date(msg.timestamp),
+              status: "delivered",
+              reactions: {},
+              _temp: false,
             },
           ]);
           break;
 
         case "message":
         default:
-          // append and also bubble up if the parent wants it
-          const newMsg = {
+          if (msg.sender_id === currentUserId) {
+            // Remove temp message with same content & add real message
+            setMessages((msgs) =>
+              msgs
+                .filter(
+                  (m) =>
+                    !(
+                      m._temp &&
+                      m.text === msg.content &&
+                      m.position === "right"
+                    )
+                )
+                .concat({
+                  id: msg.id,
+                  position: "right",
+                  type: "text",
+                  text: msg.content,
+                  title: "You",
+                  date: new Date(msg.timestamp),
+                  status: "sent",
+                  reactions: {},
+                  _temp: false,
+                })
+            );
+          } else {
+            const incoming = {
+              id: msg.id,
+              position: "left",
+              type: "text",
+              text: msg.content,
+              title: friend.full_name,
+              date: new Date(msg.timestamp),
+              status: "delivered",
+              reactions: {},
+              _temp: false,
+            };
+            setMessages((msgs) => [...msgs, incoming]);
+          }
+
+          // Bubble event to parent component if needed
+          onNewMessage?.({
             id: msg.id,
-            position:
-              msg.sender_id === currentUserId ? "right" : "left",
+            position: msg.sender_id === currentUserId ? "right" : "left",
             type: "text",
             text: msg.content,
-            title:
-              msg.sender_id === currentUserId ? "You" : friend.full_name,
+            title: msg.sender_id === currentUserId ? "You" : friend.full_name,
             date: new Date(msg.timestamp),
-          };
-          setMessages((msgs) => [...msgs, newMsg]);
-          onNewMessage?.(newMsg);
+          });
           break;
       }
     };
 
-    ws.onclose = () =>
-      console.log("WebSocket closed for chatId", chatId);
+    ws.onclose = () => console.log("WebSocket closed for chatId", chatId);
 
     return () => ws.close();
   }, [chatId, friend, onNewMessage, currentUserId]);
 
+  // Send new message with optimistic UI
   const sendMessage = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    const tempId = Date.now();
+    const newTempMsg = {
+      _temp: true,
+      id: tempId,
+      position: "right",
+      type: "text",
+      text: trimmed,
+      title: "You",
+      date: new Date(),
+      status: "waiting",
+      reactions: {},
+    };
+    setMessages((msgs) => [...msgs, newTempMsg]);
+
     sendAction({ content: trimmed });
     setText("");
   };
@@ -171,10 +320,7 @@ export default function MiddlePane({
       <div className={styles.header}>
         <div className={styles.userbox}>
           <div className={styles.userImage}>
-            <img
-              src={friend.photo || "https://i.pravatar.cc/40"}
-              alt={friend.full_name}
-            />
+            <img src={friend.photo || "https://i.pravatar.cc/40"} alt={friend.full_name} />
           </div>
           <div className={styles.name_status}>
             <div className={styles.name}>
@@ -185,6 +331,7 @@ export default function MiddlePane({
             </div>
           </div>
         </div>
+
         <div className={styles.calls}>
           <button className={styles.callButton} aria-label="Video call">
             <FontAwesomeIcon icon={faVideo} />
@@ -193,6 +340,7 @@ export default function MiddlePane({
             <FontAwesomeIcon icon={faPhone} />
           </button>
         </div>
+
         <div className={styles.searchMessages}>
           <button type="submit" aria-label="Search messages">
             <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -201,22 +349,61 @@ export default function MiddlePane({
       </div>
 
       {/* Typing indicator */}
-      {Object.keys(typingUsers).some((id) => typingUsers[id]) && (
-        <div className={styles.typingIndicator}>
-          {friend.full_name} is typing…
-        </div>
+      {Object.values(typingUsers).some(Boolean) && (
+        <div className={styles.typingIndicator}>{friend.full_name} is typing…</div>
       )}
 
       {/* Messages Box */}
-      <div className={styles.chatsMessagesBox}>
+      <div className={styles.chatsMessagesBox} ref={chatBoxRef}>
+        {loadingOldMessages && <Loader />}
         {messages.map((m) => (
-          <MessageBox
-            key={m.id}
-            {...m}
-            onStringClick={() => toggleReaction(m.id, "👍")}
-            onLongPress={() => submitDelete(m.id)}
-            // you can wire up edit & reply similarly
-          />
+          <div key={m.id} className={styles.messageContainer}>
+            {editingId === m.id ? (
+              <div className={styles.editContainer}>
+                <Input
+                  multiline={false}
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  rightButtons={
+                    <>
+                      <Button text="Save" onClick={submitEditHandler} />
+                      <Button icon={<FontAwesomeIcon icon={faTimes} />} onClick={() => setEditingId(null)} />
+                    </>
+                  }
+                />
+              </div>
+            ) : (
+              <MessageBox
+                {...m}
+                onStringClick={() => toggleReaction(m.id, "👍")}
+                onLongPress={() => submitDelete(m.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  if (!m.deleted) openOptionsForMessage(m.id);
+                }}
+                status={m.status}
+                footer={renderReactions(m.reactions)}
+              />
+            )}
+
+            {/* options button */}
+            {!m.deleted && hoveredMsgId === m.id && (
+              <button className={styles.optionsButton} onClick={() => openOptionsForMessage(m.id)} aria-label="Message options">
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            )}
+
+            {/* options panel */}
+            {optionsFor === m.id && !m.deleted && (
+              <MessageOptions
+                message={m}
+                onReact={toggleReaction}
+                onEdit={startEditing}
+                onReply={submitReply}
+                onClose={closeOptions}
+              />
+            )}
+          </div>
         ))}
       </div>
 
@@ -233,9 +420,13 @@ export default function MiddlePane({
             value={text}
             onChange={(e) => {
               setText(e.target.value);
-              startTyping();
+              debouncedTyping();
             }}
-            rightButtons={<Button text="Send" onClick={sendMessage} />}
+            rightButtons={
+              <Button onClick={sendMessage} style={{ all: "unset" }}>
+                <FontAwesomeIcon icon={faPaperPlane} />
+              </Button>
+            }
           />
         </div>
       </div>

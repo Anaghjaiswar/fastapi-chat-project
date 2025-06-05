@@ -1,0 +1,27 @@
+.optionsPanel {
+  position: absolute;
+  top: 24px;
+  right: 8px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+.optionsPanel button {
+  background: none;
+  border: none;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.optionsPanel button:hover {
+  background: #f5f5f5;
+}
+.closeButton {
+  align-self: flex-end;
+  margin: 4px;
+}

@@ -125,13 +125,14 @@ async def ws_direct(
                 await manager.broadcast("direct", chat_id, {
                     "action": "typing",
                     "user_id": user.id,
-                })
+                }, exclude_ws=websocket)
                 continue
 
             if action == "reaction":
                 msg_id = data["message_id"]
                 emoji = data["emoji"]
-                await update_message_reaction(db, msg_id, user.id, emoji)
+                new_json = await update_message_reaction(db, msg_id, user.id, emoji)
+                # print(f"[REACTION] User {user.id} toggled '{emoji}' on message {msg_id}. Now: {new_json}")
                 await manager.broadcast("direct", chat_id, {
                     "action": "reaction",
                     "message_id": msg_id,
@@ -321,3 +322,57 @@ async def create_group_chat(
     room = result.unique().scalar_one()
 
     return room
+
+# fetch old chat (direct)
+@router.get("/direct/{chat_id}/messages", status_code=status.HTTP_200_OK)
+async def fetch_old_messages(
+    chat_id: int,
+    limit: int = 20,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch old messages for a particular direct chat.
+    - `chat_id`: The ID of the direct chat.
+    - `limit`: Number of messages to fetch.
+    - `offset`: Number of messages to skip (useful for pagination).
+    """
+    # Ensure user is authorized to view the chat
+    result = await db.execute(select(DirectChat).filter(DirectChat.id == chat_id))
+    chat = result.scalars().first()
+    
+    if not chat or current_user.id not in (chat.user_a_id, chat.user_b_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized to view this chat")
+
+    # Count total messages
+    total_q = select(Message).filter(Message.direct_chat_id == chat_id)
+    total_result = await db.execute(total_q)
+    total_count = len(total_result.scalars().all())
+
+    # Calculate real offset from the end
+    real_offset = max(total_count - limit - offset, 0)
+    real_limit = min(limit, total_count - offset)
+
+    q = (
+        select(Message)
+        .filter(Message.direct_chat_id == chat_id)
+        .order_by(Message.created_at.asc())
+        .offset(real_offset)
+        .limit(real_limit)
+    )
+    result = await db.execute(q)
+    messages = result.scalars().all()
+
+    # Serialize messages for the response
+    return [
+        {
+            "id": msg.id,
+            "sender_id": msg.sender_id,
+            "content": msg.content,
+            "type": msg.message_type,
+            "timestamp": msg.created_at.isoformat(),
+        }
+        for msg in messages
+    ]
+

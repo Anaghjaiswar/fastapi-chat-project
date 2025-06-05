@@ -17,10 +17,11 @@ class ConnectionManager:
         if channel_id in mapping:
             mapping[channel_id].discard(websocket)
 
-    async def broadcast(self, channel: str, channel_id: int, message: dict):
+    async def broadcast(self, channel: str, channel_id: int, message: dict, exclude_ws: WebSocket = None):
         mapping = self.active_rooms if channel=="room" else self.active_directs
         for ws in mapping.get(channel_id, []):
-            await ws.send_json(message)
+            if ws != exclude_ws:
+                await ws.send_json(message)
 
     async def broadcast_with_redis(self, channel: str, channel_id: int, message: dict):
         redis_channel = f"{channel}:{channel_id}"
