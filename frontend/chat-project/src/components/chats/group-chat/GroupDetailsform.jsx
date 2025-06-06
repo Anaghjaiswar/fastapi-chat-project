@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import PropTypes from "prop-types";
-import styles from "./GroupDetailsForm.module.css";
+import styles from "./GroupDetailsform.module.css";
 import Input from './Input';
 import CreateGroupButton from "./CreateGroupButton";
 import BackButton from "./BackButton";
