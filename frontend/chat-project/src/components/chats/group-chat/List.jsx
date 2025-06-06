@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import styles from "./List.module.css";
-import Checkbox from "./checkbox";
+import Checkbox from "./Checkbox";
 import { friendsList } from "../../../api/friendsList";
 import Next from "./Next";
 
