@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 // import { registerUser } from '../../api/register';
 import styles from './Register.module.css';
-import { registerUser } from '../../api/Register';
+import { registerUser } from '../../api/register';
 
 export default function Register({ email, onBack, onNext }) {
   const [form, setForm] = useState({
