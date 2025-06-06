@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { BACKEND_URL } from "../config/config";
 
 export default function RequireAuth() {
   const [loading, setLoading] = useState(true);
@@ -8,7 +9,7 @@ export default function RequireAuth() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('http://localhost:8000/auth/verify', {
+        const res = await fetch(`${BACKEND_URL}/auth/verify`, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error('Not authenticated');
