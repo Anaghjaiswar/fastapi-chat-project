@@ -4,7 +4,6 @@ import styles from "./GroupDetailsForm.module.css";
 import Input from './Input';
 import CreateGroupButton from "./CreateGroupButton";
 import BackButton from "./BackButton";
-// import Button from "../../button/Button"
 import ImageUpload from "./ImageUpload";
 
 export default function DetailsForm({
