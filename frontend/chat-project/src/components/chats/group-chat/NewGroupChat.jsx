@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createGroupChat } from "../../../api/createGroupChat";
 import styles from "./NewGroupChat.module.css";
-import List from "./list";
+import List from "./List";
 import Next from "./Next";
 import DetailsForm from "./GroupDetailsform";
 
