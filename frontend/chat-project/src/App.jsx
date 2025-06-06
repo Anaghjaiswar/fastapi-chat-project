@@ -14,11 +14,11 @@ function App() {
         <Routes>
           <Route path="/login" element = {<Login/>}></Route>
           <Route path="/auth" element={<Auth/>}></Route>
-
-          <Route element={<RequireAuth/>}>
-
             <Route path="/chat" element={<ChatPage/>}></Route>
-          </Route>
+
+          {/* <Route element={<RequireAuth/>}>
+
+          </Route> */}
         </Routes>
       </Router>
     </>
