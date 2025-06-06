@@ -16,6 +16,7 @@ import useDebouncedCallback from "../../hooks/useDebouncedCallback";
 import MessageOptions from "./MessageOptions";
 import { fetchOldMessagesDirect } from "../../api/fetchOldMessagesDirect";
 import Loader from "../loader/LoadingSpinner";
+import VideoCall from "./VideoCall";// <-- Import VideoCall component
 
 export default function MiddlePane({
   chatId,
@@ -37,6 +38,7 @@ export default function MiddlePane({
   const [editText, setEditText] = useState("");     // <-- Add this line
   const [optionsFor, setOptionsFor] = useState(null); // <-- Add this line
   const [hoveredMsgId, setHoveredMsgId] = useState(null); // <-- Add this line
+  const [showVideoCall, setShowVideoCall] = useState(false);
 
   // Helper to map backend message to frontend shape
   const mapBackendMessage = (msg) => ({
@@ -333,7 +335,7 @@ export default function MiddlePane({
         </div>
 
         <div className={styles.calls}>
-          <button className={styles.callButton} aria-label="Video call">
+          <button className={styles.callButton} aria-label="Video call" onClick={() => setShowVideoCall(true)}>
             <FontAwesomeIcon icon={faVideo} />
           </button>
           <button className={styles.callButton} aria-label="Voice call">
@@ -430,6 +432,16 @@ export default function MiddlePane({
           />
         </div>
       </div>
+
+      {/* Video Call Component - Conditionally Rendered */}
+      {showVideoCall && (
+        <VideoCall
+          chatId={chatId}
+          userId={currentUserId}
+          friendId={friend.id}
+          onClose={() => setShowVideoCall(false)}
+        />
+      )}
     </div>
   );
 }

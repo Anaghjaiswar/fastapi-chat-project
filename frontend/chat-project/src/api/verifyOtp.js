@@ -1,5 +1,7 @@
+import { BACKEND_URL } from "../config/config";
+
 export async function verifyOtp(data){
-    const res = await fetch("http://localhost:8000/auth/verify-otp",{
+    const res = await fetch(`${BACKEND_URL}/auth/verify-otp`,{
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

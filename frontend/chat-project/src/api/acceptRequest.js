@@ -1,7 +1,9 @@
 import { fetchWithAuth } from "../utils/fetchWrapper";
+import { BACKEND_URL } from "../config/config";
+
 
 export async function acceptRequest(data){
-    const res = await fetchWithAuth('http://localhost:8000/user/accept-request', {
+    const res = await fetchWithAuth(`${BACKEND_URL}/user/accept-request`, {
         method: "POST",
         credentials: "include",
         body: JSON.stringify(data),

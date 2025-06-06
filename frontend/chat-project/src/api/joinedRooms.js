@@ -1,8 +1,9 @@
 // src/api/joinedRooms.js
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export async function joinedRoomsList() {
-  const res = await fetchWithAuth("http://localhost:8000/user/joined-rooms", {
+  const res = await fetchWithAuth(`${BACKEND_URL}/user/joined-rooms`, {
     method: "GET",
     credentials: "include",
   });

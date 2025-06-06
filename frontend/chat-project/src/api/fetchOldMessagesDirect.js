@@ -1,9 +1,10 @@
 // src/api/fetchOldMessagesDirect.js
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export async function fetchOldMessagesDirect(chatId, limit = 20, offset = 0) {
   const res = await fetchWithAuth(
-    `http://localhost:8000/chat/direct/${chatId}/messages?limit=${limit}&offset=${offset}`,
+    `${BACKEND_URL}/chat/direct/${chatId}/messages?limit=${limit}&offset=${offset}`,
     {
       method: "GET",
       credentials: "include",

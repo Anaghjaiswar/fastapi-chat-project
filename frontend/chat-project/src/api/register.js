@@ -1,6 +1,8 @@
+import { BACKEND_URL } from "../config/config";
+
 export async function registerUser(data){
     console.log("data: ", data);
-    const res = await fetch("http://localhost:8000/user/register",{
+    const res = await fetch(`${BACKEND_URL}/user/register`,{
         method: "POST",
        
         headers: { 'Content-Type': 'application/json' },

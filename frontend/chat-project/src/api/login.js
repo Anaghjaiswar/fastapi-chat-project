@@ -1,10 +1,12 @@
+import { BACKEND_URL } from "../config/config";
+
 export async function loginUser(data){
     const params = new URLSearchParams()
     params.append("username", data.email.toLowerCase());
     params.append("password", data.password);
 
 
-    const res = await fetch("http://localhost:8000/auth/login",{
+    const res = await fetch(`${BACKEND_URL}/auth/login`,{
         method: "POST",
         credentials: "include",
         headers: {

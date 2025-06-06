@@ -1,7 +1,8 @@
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export async function sendFriendRequest(toUserId){
-    const res = await fetchWithAuth('http://localhost:8000/user/send-request',{
+    const res = await fetchWithAuth(`${BACKEND_URL}/user/send-request`,{
         method: "POST",
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },

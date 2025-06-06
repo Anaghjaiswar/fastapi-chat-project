@@ -1,7 +1,8 @@
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export async function friendsList(){
-    const res = await fetchWithAuth('http://localhost:8000/user/friends',{
+    const res = await fetchWithAuth(`${BACKEND_URL}/user/friends ` ,{
         method: "GET",
         credentials: "include",
     });

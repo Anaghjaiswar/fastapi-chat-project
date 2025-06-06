@@ -1,4 +1,5 @@
 // src/api/createGroupChat.js
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export async function createGroupChat({ name, description, room_avatar, member_ids }) {
@@ -11,7 +12,7 @@ export async function createGroupChat({ name, description, room_avatar, member_i
     form.append("room_avatar", room_avatar);
   }
 
-  const res = await fetchWithAuth("http://localhost:8000/chat/create-group", {
+  const res = await fetchWithAuth(`${BACKEND_URL}/chat/create-group`, {
     method: "POST",
     credentials: "include",
     // **Remove** the Content-Type header! Let the browser set multipart boundaries

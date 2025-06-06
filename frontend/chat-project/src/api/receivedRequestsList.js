@@ -1,7 +1,8 @@
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export async function receivedRequestsList() {
-    const res = await fetchWithAuth('http://localhost:8000/user/received-requests',{
+    const res = await fetchWithAuth(`${BACKEND_URL}/user/received-requests`,{
         method: "GET",
         credentials: "include",
     });

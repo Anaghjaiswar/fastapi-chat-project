@@ -1,9 +1,10 @@
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 
 
 export async function usersList(){
-    const res = await fetchWithAuth("http://localhost:8000/user/list",{
+    const res = await fetchWithAuth(`${BACKEND_URL}/user/list`,{
         credentials: "include",
         method: "GET",
         

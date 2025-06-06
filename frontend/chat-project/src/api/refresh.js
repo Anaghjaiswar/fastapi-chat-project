@@ -1,5 +1,7 @@
+import { BACKEND_URL } from "../config/config";
+
 export async function refreshAccessToken() {
-  const response = await fetch('http://localhost:8000/auth/token/refresh', {
+  const response = await fetch(`${BACKEND_URL}/auth/token/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include', // will attach HttpOnly refresh cookie if present

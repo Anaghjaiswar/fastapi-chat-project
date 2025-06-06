@@ -1,8 +1,9 @@
+import { BACKEND_URL } from "../config/config";
 import { fetchWithAuth } from "../utils/fetchWrapper";
 
 export const searchUsers = async (query) => {
   try {
-    const url = `http://localhost:8000/user/search?query=${encodeURIComponent(query)}`;
+    const url = `${BACKEND_URL}/user/search?query=${encodeURIComponent(query)}`;
     const res = await fetchWithAuth(url, {
         method: "GET",
         credentials: "include"
