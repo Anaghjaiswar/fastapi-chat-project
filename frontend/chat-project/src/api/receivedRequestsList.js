@@ -4,7 +4,6 @@ import { fetchWithAuth } from "../utils/fetchWrapper";
 export async function receivedRequestsList() {
     const res = await fetchWithAuth(`${BACKEND_URL}/user/received-requests`,{
         method: "GET",
-        credentials: "include",
     });
     const payload = await res.json()
     if (!res.ok){

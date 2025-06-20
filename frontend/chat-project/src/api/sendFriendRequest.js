@@ -4,7 +4,6 @@ import { fetchWithAuth } from "../utils/fetchWrapper";
 export async function sendFriendRequest(toUserId){
     const res = await fetchWithAuth(`${BACKEND_URL}/user/send-request`,{
         method: "POST",
-        credentials: "include",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to_user_id: toUserId }),
     })

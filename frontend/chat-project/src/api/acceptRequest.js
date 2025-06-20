@@ -5,7 +5,6 @@ import { BACKEND_URL } from "../config/config";
 export async function acceptRequest(data){
     const res = await fetchWithAuth(`${BACKEND_URL}/user/accept-request`, {
         method: "POST",
-        credentials: "include",
         body: JSON.stringify(data),
         headers: { "Content-Type": "application/json" },
     })

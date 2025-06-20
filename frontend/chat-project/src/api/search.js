@@ -6,7 +6,6 @@ export const searchUsers = async (query) => {
     const url = `${BACKEND_URL}/user/search?query=${encodeURIComponent(query)}`;
     const res = await fetchWithAuth(url, {
         method: "GET",
-        credentials: "include"
     });
     if (!res.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`);

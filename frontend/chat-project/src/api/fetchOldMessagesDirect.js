@@ -7,7 +7,6 @@ export async function fetchOldMessagesDirect(chatId, limit = 20, offset = 0) {
     `${BACKEND_URL}/chat/direct/${chatId}/messages?limit=${limit}&offset=${offset}`,
     {
       method: "GET",
-      credentials: "include",
     }
   );
   

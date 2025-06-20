@@ -5,7 +5,6 @@ export async function verifyOtp(data){
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-        credentials: "include",
     });
 
     const payload = await res.json();

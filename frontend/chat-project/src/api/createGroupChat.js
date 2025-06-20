@@ -14,8 +14,6 @@ export async function createGroupChat({ name, description, room_avatar, member_i
 
   const res = await fetchWithAuth(`${BACKEND_URL}/chat/create-group`, {
     method: "POST",
-    credentials: "include",
-    // **Remove** the Content-Type header! Let the browser set multipart boundaries
     body: form,
   });
 

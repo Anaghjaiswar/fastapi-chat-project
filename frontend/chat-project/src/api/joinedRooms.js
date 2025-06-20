@@ -5,7 +5,6 @@ import { fetchWithAuth } from "../utils/fetchWrapper";
 export async function joinedRoomsList() {
   const res = await fetchWithAuth(`${BACKEND_URL}/user/joined-rooms`, {
     method: "GET",
-    credentials: "include",
   });
   if (!res.ok) {
     const err = await res.json();

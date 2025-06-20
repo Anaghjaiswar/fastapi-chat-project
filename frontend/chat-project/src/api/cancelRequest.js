@@ -5,7 +5,6 @@ export async function cancelRequest(data) {
   const res = await fetchWithAuth(`${BACKEND_URL}/user/cancel-request`,
     {
       method: "DELETE",
-      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }

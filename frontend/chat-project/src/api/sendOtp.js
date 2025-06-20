@@ -5,8 +5,7 @@ export async function sendOtp(data){
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-        credentials: "include"
-        
+
     })
     console.log("res: ", res);
 
@@ -14,7 +13,7 @@ export async function sendOtp(data){
     if (res.status === 404){
         throw new Error("Please use the same email from which you registered your account");   
     }
-    if (res .status === 400){
+    if (res.status === 400){
         throw new Error("You are already verified")
     }
     if (!res.ok) {
