@@ -10,13 +10,13 @@ export default function RequireAuth() {
 
   useEffect(() => {
     (async () => {
-      // Log the URL we’re about to fetch:
       const verifyUrl = `${BACKEND_URL}/auth/verify`;
+      const token = localStorage.getItem("access_token");
       console.log("⏳ Calling verify at:", verifyUrl);
 
       try {
         const res = await fetch(verifyUrl, {
-          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         console.log("🔹 Verify response status:", res.status);
         if (!res.ok) throw new Error('Not authenticated');

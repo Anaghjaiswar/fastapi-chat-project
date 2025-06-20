@@ -13,13 +13,19 @@ function onRefreshed() {
 }
 
 export async function fetchWithAuth(url, options = {}) {
+  let token = localStorage.getItem("access_token");
   const { headers = {}, ...rest } = options;
+
+  const authHeaders = {
+    ...headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
   try {
     const response = await fetch(url, {
       ...rest,
-      headers,
-      credentials: 'include', // Include cookies (important for HttpOnly cookies)
+      headers: authHeaders,
+      // credentials: 'include', // REMOVE this line
     });
 
     // If the response is unauthorized (401), attempt token refresh
@@ -27,11 +33,11 @@ export async function fetchWithAuth(url, options = {}) {
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          await refreshAccessToken(); // Refresh token using a cookie-based refresh endpoint
-          onRefreshed(); // Notify other requests
+          await refreshAccessToken(); // This should update localStorage with new token
+          onRefreshed();
         } catch (err) {
           console.error('Token refresh failed', err);
-          throw err; // Fail the request if refresh fails
+          throw err;
         } finally {
           isRefreshing = false;
         }
@@ -42,8 +48,10 @@ export async function fetchWithAuth(url, options = {}) {
         subscribeTokenRefresh(() => {
           fetchWithAuth(url, {
             ...rest,
-            headers,
-            credentials: 'include',
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
           })
             .then(resolve)
             .catch(reject);
@@ -51,7 +59,7 @@ export async function fetchWithAuth(url, options = {}) {
       });
     }
 
-    return response; 
+    return response;
   } catch (error) {
     console.error('Fetch error:', error);
     throw error;
