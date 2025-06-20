@@ -43,7 +43,12 @@ export default function Register({ email, onBack, onNext }) {
 
     setLoading(true);
     try {
-      await registerUser({ ...form, email });
+      const payload = await registerUser({ ...form, email });
+      // Store tokens if returned by backend
+      if (payload.access_token && payload.refresh_token) {
+        localStorage.setItem("access_token", payload.access_token);
+        localStorage.setItem("refresh_token", payload.refresh_token);
+      }
       onNext(); // registration successful, parent can navigate
     } catch (err) {
       setGeneralError(err.detail || err.message || 'Registration failed');

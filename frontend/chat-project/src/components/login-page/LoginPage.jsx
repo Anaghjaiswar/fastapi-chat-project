@@ -31,22 +31,22 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
-    const fieldErrs = validate();
-    if (Object.keys(fieldErrs).length) {
-      setErrors(fieldErrs);
+    if (Object.keys(errs).length) {
+      setErrors(errs);
       return;
     }
-    
-    setLoading(true)
-    try{
-        const { user_id } = await loginUser({ email: form.email, password: form.password });
-        localStorage.setItem("userId", user_id);
 
-        navigate('/chat');
+    setLoading(true);
+    try {
+      const { user_id, access_token, refresh_token } = await loginUser({ email: form.email, password: form.password });
+      localStorage.setItem("userId", user_id);
+      localStorage.setItem("access_token", access_token);      // <-- store access token
+      localStorage.setItem("refresh_token", refresh_token);    // <-- store refresh token
+
+      navigate('/chat');
     } catch (err) {
       setGeneralError(err.message);
-    } 
-    finally {
+    } finally {
       setLoading(false);
     }
   };
