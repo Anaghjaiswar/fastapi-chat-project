@@ -34,56 +34,47 @@ async def login_user(
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token({"sub": user.email})
 
-    # Set HttpOnly cookies
-    response.set_cookie("access_token", access_token, httponly=True, secure=False, samesite="lax", max_age=15*60, path="/")
-    response.set_cookie("refresh_token", refresh_token, httponly=True, secure=False, samesite="lax", max_age=7*24*3600, path="/")
-
+    # Do NOT set cookies. Just return tokens in response.
     return {
         "message": "Login successful",
-        "user_id": user.id
+        "user_id": user.id,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
     }
 
 
 @router.post("/token/refresh", status_code=status.HTTP_200_OK)
-async def refresh_token_cookie(request: Request, response: Response):
-    # read refresh_token from HTTP-only cookie
-    rt = request.cookies.get("refresh_token")
+async def refresh_token_cookie(request: Request):
+    # Read refresh_token from request body (not cookie)
+    body = await request.json()
+    rt = body.get("refresh_token")
     if not rt:
-        raise HTTPException(status_code=401, detail="No refresh token cookie")
+        raise HTTPException(status_code=401, detail="No refresh token provided")
     # validate it
     try:
         payload = decode_token(rt, token_type="refresh")
     except:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    # create & set new access token cookie
     new_access = create_access_token({"sub": payload["sub"]})
-    response.set_cookie(
-        key="access_token",
-        value=new_access,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=15*60,
-        path="/"
-    )
-    return {"message": "Access token refreshed"}
+    return {"access_token": new_access}
 
 
 
 @router.get("/verify", status_code=status.HTTP_200_OK)
 async def verify_token_cookie(request: Request):
-    # read access_token from HTTP-only cookie
-    at = request.cookies.get("access_token")
+    # Read access_token from query or header
+    token = request.headers.get("Authorization")
+    if token and token.startswith("Bearer "):
+        at = token[7:]
+    else:
+        at = request.query_params.get("access_token")
     if not at:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    # validate it
-    print(at)
     try:
         payload = decode_token(at, token_type="access")
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-
     return {"message": "Token valid", "user": payload["sub"]}
 
 
@@ -196,23 +187,9 @@ async def register_user(
     access_token  = create_access_token({"sub": email})
     refresh_token = create_refresh_token({"sub": email})
 
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=False,         # in prod HTTPS only
-        samesite="lax",
-        max_age=15 * 60,
-        path="/"
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=7 * 24 * 3600,
-        path="/"
-    )
-
-    return new_user
+    # Do NOT set cookies. Just return tokens in response.
+    return {
+        "user": new_user,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+    }
